@@ -1,290 +1,2843 @@
-name: "AI Security Guardian Mega Workflow"
+name: AI Security Guardian Mega Workflow
 sections:
-  - id: 1
-    name: "01 Configuration"
-    color: 6
-    nodes:
-      - name: "CRON_Trigger"
-        type: "n8n-nodes-base.scheduleTrigger"
+- id: 1
+  name: 01 API Gateway & RBAC
+  color: 6
+  manual_wiring: true
+  nodes:
+  - name: API_Scan
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 0
+    parameters:
+      path: api/v1/scan
+      httpMethod: POST
+      responseMode: lastNode
+    connections:
+      main:
+      - - node: CODE_RBAC_Validator
+          type: main
+          index: 0
+  - name: API_Investigation
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 150
+    parameters:
+      path: api/v1/investigation
+      httpMethod: POST
+      responseMode: lastNode
+    connections:
+      main:
+      - - node: CODE_RBAC_Validator
+          type: main
+          index: 0
+  - name: API_Dashboard
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 300
+    parameters:
+      path: api/v1/dashboard
+      httpMethod: GET
+      responseMode: lastNode
+    connections:
+      main:
+      - - node: CODE_RBAC_Validator
+          type: main
+          index: 0
+  - name: API_Health
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 450
+    parameters:
+      path: api/v1/health
+      httpMethod: GET
+      responseMode: lastNode
+    connections:
+      main:
+      - - node: CODE_RBAC_Validator
+          type: main
+          index: 0
+  - name: CODE_RBAC_Validator
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: "\n// Mock RBAC validation against postgres table\nconst authHeader\
+        \ = ($node.API_Scan || $node.API_Dashboard || $node.API_Health || $node.API_Investigation\
+        \ || {headers:{}})?.headers?.authorization;\nif (!authHeader) {\n    // In\
+        \ reality, this would throw an error to return 401\n    return { auth: { status:\
+        \ 'unauthorized', role: 'none' } };\n}\nreturn { auth: { status: 'authorized',\
+        \ role: 'Admin' } };\n"
+    connections:
+      main:
+      - - node: CODE_API_Router
+          type: main
+          index: 0
+  - name: CODE_API_Router
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 600
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Route to Trigger Layer if it''s a scan, else handle response
+
+        return $json;
+
+        '
+    connections: {}
+- id: 2
+  name: 02 Trigger Layer
+  color: 7
+  manual_wiring: true
+  nodes:
+  - name: Trigger_Webhook
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 0
+    parameters:
+      path: scan-trigger
+      options: {}
+    connections:
+      main:
+      - - node: CODE_TriggerRouter
+          type: main
+          index: 0
+  - name: Trigger_GitHub
+    type: n8n-nodes-base.githubTrigger
+    entrypoint: true
+    x: 0
+    y: 150
+    parameters:
+      events:
+      - push
+    connections:
+      main:
+      - - node: CODE_TriggerRouter
+          type: main
+          index: 0
+  - name: Trigger_Schedule
+    type: n8n-nodes-base.cron
+    entrypoint: true
+    x: 0
+    y: 300
+    parameters:
+      triggerTimes:
+        item:
+        - mode: everyDay
+          hour: 2
+    connections:
+      main:
+      - - node: CODE_TriggerRouter
+          type: main
+          index: 0
+  - name: Trigger_Manual
+    type: n8n-nodes-base.manualTrigger
+    entrypoint: true
+    x: 0
+    y: 450
+    parameters: {}
+    connections:
+      main:
+      - - node: CODE_TriggerRouter
+          type: main
+          index: 0
+  - name: CODE_TriggerRouter
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 400
+    y: 200
+    parameters:
+      jsCode: "\nconst source = $node.Trigger_Webhook ? 'Webhook' : \n           \
+        \    $node.Trigger_GitHub ? 'GitHub' : \n               $node.Trigger_Schedule\
+        \ ? 'Schedule' : 'Manual';\n               \nreturn {\n    trigger: {\n  \
+        \      source: source,\n        timestamp: new Date().toISOString(),\n   \
+        \     initiated_by: 'system'\n    }\n};\n"
+    connections: {}
+- id: 3
+  name: 03 Configuration
+  color: 6
+  nodes:
+  - name: CRON_Trigger
+    type: n8n-nodes-base.scheduleTrigger
+    parameters:
+      rule:
+        interval:
+        - field: days
+          daysInterval: 1
+  - name: CFG_Configuration
+    type: n8n-nodes-base.set
+    parameters:
+      values:
+        string:
+        - name: TARGET_DOMAIN
+          value: example.com
+        - name: SCAN_PROFILE
+          value: Standard
+        - name: OPENAI_MODEL
+          value: gpt-4o
+        boolean:
+        - name: ENABLE_NMAP
+          value: true
+        - name: ENABLE_NUCLEI
+          value: true
+        - name: ENABLE_SSL
+          value: true
+        - name: ENABLE_HEADERS
+          value: true
+        - name: ENABLE_AI
+          value: true
+        - name: ENABLE_NVD
+          value: true
+        - name: ENABLE_EPSS
+          value: true
+        - name: ENABLE_KEV
+          value: true
+        - name: ENABLE_SHODAN
+          value: false
+        - name: ENABLE_VIRUSTOTAL
+          value: true
+        - name: ENABLE_GREYNOISE
+          value: false
+        - name: ENABLE_ABUSEIPDB
+          value: false
+        number:
+        - name: TIMEOUT
+          value: 60
+        - name: RETRY
+          value: 3
+        - name: PARALLEL_LIMIT
+          value: 5
+        - name: TTL_NVD
+          value: 604800
+        - name: TTL_EPSS
+          value: 86400
+        - name: TTL_KEV
+          value: 86400
+        - name: TTL_SHODAN
+          value: 43200
+        - name: TTL_VIRUSTOTAL
+          value: 43200
+        - name: TTL_GREYNOISE
+          value: 21600
+        - name: TTL_ABUSEIPDB
+          value: 86400
+- id: 4
+  name: 04 Asset Inventory
+  color: 2
+  manual_wiring: true
+  nodes:
+  - name: DB_LoadAssetCMDB
+    type: n8n-nodes-base.postgres
+    entrypoint: true
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 0
+    y: 200
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM assets WHERE domain = '{{ $('CFG_Configuration').item.json.TARGET_DOMAIN
+        }}' LIMIT 1
+    connections:
+      main:
+      - - node: CODE_AttachAssetContext
+          type: main
+          index: 0
+  - name: CODE_AttachAssetContext
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 400
+    y: 200
+    parameters:
+      jsCode: "\n// Merge the trigger data, config data, and CMDB data into the global\
+        \ payload\nconst config = $items(\"CFG_Configuration\")[0].json;\nconst cmdb\
+        \ = $json || { domain: config.TARGET_DOMAIN, environment: 'Unknown', criticality:\
+        \ 'Medium' };\n\nreturn {\n    ...config,\n    asset_context: cmdb\n};\n"
+    connections: {}
+- id: 5
+  name: 05 Plugin Manager
+  color: 2
+  manual_wiring: true
+  nodes:
+  - name: DB_LoadPlugins
+    type: n8n-nodes-base.postgres
+    entrypoint: true
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 0
+    y: 200
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM plugins WHERE enabled = true ORDER BY priority ASC
+    connections:
+      main:
+      - - node: CODE_PluginRouter
+          type: main
+          index: 0
+  - name: CODE_PluginRouter
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 300
+    y: 200
+    parameters:
+      jsCode: '
+
+        const globalJson = $json;
+
+        const activePlugins = $input.all().map(i => i.json);
+
+        globalJson.plugins_enabled = activePlugins.map(p => p.name);
+
+        return globalJson;
+
+        '
+    connections: {}
+- id: 6
+  name: 06 Asset Discovery
+  color: 1
+  nodes:
+  - name: HTTP_Subfinder
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    parameters:
+      url: https://api.subfinder.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN
+        }}
+  - name: HTTP_WHOIS
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    parameters:
+      url: https://api.whois.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN
+        }}
+- id: 7
+  name: 07 DNS
+  color: 1
+  nodes:
+  - name: HTTP_CloudflareDNS
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    parameters:
+      url: https://cloudflare-dns.com/dns-query?name={{ $('CFG_Configuration').item.json.TARGET_DOMAIN
+        }}&type=A
+      sendHeaders: true
+      headerParameters:
         parameters:
-          rule:
-            interval:
-              - field: "days"
-                daysInterval: 1
-      - name: "CFG_Configuration"
-        type: "n8n-nodes-base.set"
+        - name: accept
+          value: application/dns-json
+  - name: HTTP_ReverseDNS
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+- id: 8
+  name: 08 Attack Surface
+  color: 2
+  nodes:
+  - name: CMD_Nmap
+    type: n8n-nodes-base.executeCommand
+    continueOnFail: true
+    parameters:
+      command: nmap -Pn -F {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -oX
+        -
+  - name: HTTP_SSL
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    parameters:
+      url: https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}
+      options:
+        allowUnauthorizedCerts: true
+        fullResponse: true
+  - name: HTTP_Headers
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    parameters:
+      url: https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}
+- id: 9
+  name: 09 Vulnerability Scanning
+  color: 3
+  nodes:
+  - name: CMD_Nuclei
+    type: n8n-nodes-base.executeCommand
+    continueOnFail: true
+    parameters:
+      command: nuclei -u https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN
+        }} -json
+  - name: CMD_Trivy
+    type: n8n-nodes-base.executeCommand
+    continueOnFail: true
+  - name: CMD_ZAP_Passive
+    type: n8n-nodes-base.executeCommand
+    continueOnFail: true
+- id: 10
+  name: 10 Cloud Security
+  color: 3
+  manual_wiring: true
+  nodes:
+  - name: Cloud_AWS_Prowler
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 0
+    parameters:
+      command: echo 'Mock AWS Prowler scan' && cat examples/mock_prowler.json || echo
+        '{}'
+    connections:
+      main:
+      - - node: CODE_CloudNormalizer
+          type: main
+          index: 0
+  - name: Cloud_Azure_API
+    type: n8n-nodes-base.httpRequest
+    entrypoint: true
+    x: 0
+    y: 150
+    parameters:
+      url: https://management.azure.com/mock
+      method: GET
+    connections:
+      main:
+      - - node: CODE_CloudNormalizer
+          type: main
+          index: 0
+  - name: Cloud_GCP_API
+    type: n8n-nodes-base.httpRequest
+    entrypoint: true
+    x: 0
+    y: 300
+    parameters:
+      url: https://mock.googleapis.com
+      method: GET
+    connections:
+      main:
+      - - node: CODE_CloudNormalizer
+          type: main
+          index: 0
+  - name: CODE_CloudNormalizer
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 400
+    y: 150
+    parameters:
+      jsCode: "\n// Mock normalization\nconst globalJson = $items(\"CFG_Configuration\"\
+        )[0].json;\nglobalJson.cloud_findings = [\n    { provider: 'aws', resource_type:\
+        \ 's3', resource_id: 'bucket-1', risk: 'high' }\n];\nreturn globalJson;\n"
+    connections: {}
+- id: 11
+  name: 11 Container Security
+  color: 4
+  manual_wiring: true
+  nodes:
+  - name: Container_Trivy_FS
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 0
+    parameters:
+      command: echo 'Mock Trivy FS scan'
+    connections:
+      main:
+      - - node: CODE_ContainerNormalizer
+          type: main
+          index: 0
+  - name: Container_Trivy_Image
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 150
+    parameters:
+      command: echo 'Mock Trivy Image scan'
+    connections:
+      main:
+      - - node: CODE_ContainerNormalizer
+          type: main
+          index: 0
+  - name: Container_Trivy_SBOM
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 300
+    parameters:
+      command: echo 'Mock Trivy SBOM'
+    connections:
+      main:
+      - - node: CODE_ContainerNormalizer
+          type: main
+          index: 0
+  - name: CODE_ContainerNormalizer
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 400
+    y: 150
+    parameters:
+      jsCode: "\n// Mock normalization\nconst globalJson = $items(\"CODE_CloudNormalizer\"\
+        )[0].json;\nglobalJson.container_findings = [\n    { image_name: 'nginx:latest',\
+        \ vulnerabilities: 5, secrets: 1 }\n];\nreturn globalJson;\n"
+    connections: {}
+- id: 12
+  name: 12 IaC Manager
+  color: 5
+  manual_wiring: true
+  nodes:
+  - name: IaC_Terraform
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 0
+    parameters:
+      command: echo 'Terraform Scan'
+    connections:
+      main:
+      - - node: CODE_IaCNormalizer
+          type: main
+          index: 0
+  - name: IaC_Kubernetes
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 150
+    parameters:
+      command: echo 'K8s Scan'
+    connections:
+      main:
+      - - node: CODE_IaCNormalizer
+          type: main
+          index: 0
+  - name: IaC_Helm
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 300
+    parameters:
+      command: echo 'Helm Scan'
+    connections:
+      main:
+      - - node: CODE_IaCNormalizer
+          type: main
+          index: 0
+  - name: CODE_IaCNormalizer
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 400
+    y: 150
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.iac = {\n    framework: \"\
+        Terraform\",\n    resource_type: \"aws_security_group\",\n    resource_name:\
+        \ \"prod-web-sg\",\n    misconfiguration: \"0.0.0.0/0 on port 22\",\n    severity:\
+        \ \"Critical\"\n};\nreturn globalJson;\n"
+    connections: {}
+- id: 13
+  name: 13 Normalizer
+  color: 6
+  nodes:
+  - name: CODE_StandardizeJSON
+    type: n8n-nodes-base.code
+    parameters:
+      jsCode: "return {\n  workflow_metadata: {\n    schema_version: \"2.0\",\n  \
+        \  workflow_version: \"1.1.0\",\n    build: \"2026.06.27\",\n    workflow:\
+        \ \"AI Security Guardian\",\n    phase: 2,\n    execution_id: $execution.id\n\
+        \  },\n  asset: {\n    domain: $('CFG_Configuration').item.json.TARGET_DOMAIN,\n\
+        \    fingerprint: $('CFG_Configuration').item.json.TARGET_DOMAIN + \"_\" +\
+        \ ($items(\"HTTP_CloudflareDNS\")[0]?.json?.Answer?.[0]?.data || \"noip\"\
+        )\n  },\n  evidence: {\n    nmap: $items(\"CMD_Nmap\")[0]?.json || {},\n \
+        \   nuclei: $items(\"CMD_Nuclei\")[0]?.json || {},\n    ssl: $items(\"HTTP_SSL\"\
+        )[0]?.json || {},\n    headers: $items(\"HTTP_Headers\")[0]?.json || {},\n\
+        \    dns: $items(\"HTTP_CloudflareDNS\")[0]?.json || {}\n  },\n  dns: $items(\"\
+        HTTP_CloudflareDNS\")[0]?.json || {},\n  ssl: $items(\"HTTP_SSL\")[0]?.json\
+        \ || {},\n  headers: $items(\"HTTP_Headers\")[0]?.json || {},\n  ports: ($items(\"\
+        CMD_Nmap\")[0]?.json || []).map(p => ({ port: p, confidence: 0.98 })),\n \
+        \ vulnerabilities: ($items(\"CMD_Nuclei\")[0]?.json || []).map(v => ({ ...v,\
+        \ confidence: 0.95 })),\n  threat_intelligence: {},\n  historical: {},\n \
+        \ risk: {},\n  trend: {},\n  ai: {},\n  reports: {},\n  execution: {\n   \
+        \ timestamp: new Date().toISOString(),\n    scanner_versions: {\n      nmap:\
+        \ \"7.97\",\n      nuclei: \"3.4.0\",\n      trivy: \"0.64\",\n      httpx:\
+        \ \"1.7\"\n    },\n    scanners: {\n      nmap: { success: !!$items(\"CMD_Nmap\"\
+        )[0], duration: 0 },\n      nuclei: { success: !!$items(\"CMD_Nuclei\")[0],\
+        \ duration: 0 }\n    }\n  }\n};\n"
+- id: 14
+  name: 14 Historical Comparison
+  color: 5
+  nodes:
+  - name: DB_GetPreviousScan
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    parameters:
+      operation: executeQuery
+      query: SELECT score as previous_risk_score FROM risk_scores WHERE asset_id =
+        '{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}' ORDER BY calculated_at
+        DESC LIMIT 1;
+  - name: CODE_CalculateDelta
+    type: n8n-nodes-base.code
+    parameters:
+      jsCode: "const previousScore = $items(\"DB_GetPreviousScan\")[0]?.json?.previous_risk_score\
+        \ || null;\n\n$json = $items(\"CODE_StandardizeJSON\")[0].json;\n$json.historical\
+        \ = {\n  previous_risk: previousScore,\n  is_first_scan: previousScore ===\
+        \ null,\n  new_ports: [], \n  closed_ports: [],\n  new_cves: [],\n  resolved_cves:\
+        \ []\n};\nreturn $json;\n"
+- id: 15
+  name: 15 Change Detection Engine
+  color: 1
+  manual_wiring: true
+  nodes:
+  - name: CODE_ChangeClassifier
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nconst deltas = globalJson.historical;\n\
+        const changes = [];\n\nif (deltas && deltas.new_ports && deltas.new_ports.length\
+        \ > 0) {\n    changes.push({ type: 'NEW_EXPOSURE', severity: 'HIGH', confidence:\
+        \ 0.98 });\n}\nif (deltas && deltas.new_cves && deltas.new_cves.length > 0)\
+        \ {\n    changes.push({ type: 'SECURITY_REGRESSION', severity: 'CRITICAL',\
+        \ confidence: 0.95 });\n}\nif (deltas && deltas.resolved_cves && deltas.resolved_cves.length\
+        \ > 0) {\n    changes.push({ type: 'REMEDIATION_CONFIRMED', severity: 'LOW',\
+        \ confidence: 0.99 });\n}\n\nglobalJson.changes = changes;\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_ChangePriority
+          type: main
+          index: 0
+  - name: CODE_ChangePriority
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 300
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nconst assetContext = globalJson.asset_context\
+        \ || { criticality: 'Medium' };\n\nglobalJson.changes.forEach(change => {\n\
+        \    change.business_impact = assetContext.criticality;\n});\n\nreturn globalJson;\n"
+    connections: {}
+- id: 16
+  name: 16 Threat Intelligence Cache
+  color: 4
+  manual_wiring: true
+  nodes:
+  - name: CODE_ExtractFindings
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 0
+    parameters:
+      jsCode: return $json.vulnerabilities || [];
+    connections:
+      main:
+      - - node: IF_NVD
+          type: main
+          index: 0
+        - node: IF_EPSS
+          type: main
+          index: 0
+        - node: IF_KEV
+          type: main
+          index: 0
+        - node: IF_Shodan
+          type: main
+          index: 0
+        - node: IF_VirusTotal
+          type: main
+          index: 0
+        - node: IF_GreyNoise
+          type: main
+          index: 0
+        - node: IF_AbuseIPDB
+          type: main
+          index: 0
+  - name: IF_NVD
+    type: n8n-nodes-base.if
+    x: 300
+    y: -600
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $(''CFG_Configuration'').item.json.ENABLE_NVD }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_CacheLookup_NVD
+          type: main
+          index: 0
+      - - node: SKIP_NVD
+          type: main
+          index: 0
+  - name: DB_CacheLookup_NVD
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 600
+    y: -650
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider =
+        'NVD'
+    connections:
+      main:
+      - - node: IF_CacheValid_NVD
+          type: main
+          index: 0
+  - name: IF_CacheValid_NVD
+    type: n8n-nodes-base.if
+    x: 900
+    y: -650
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.expires_at > new Date().toISOString() }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_CACHE_NVD
+          type: main
+          index: 0
+      - - node: HTTP_NVD
+          type: main
+          index: 0
+  - name: HTTP_NVD
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    x: 1200
+    y: -600
+    parameters:
+      url: https://api.example.com/nvd
+      method: GET
+    connections:
+      main:
+      - - node: IF_ApiSuccess_NVD
+          type: main
+          index: 0
+  - name: IF_ApiSuccess_NVD
+    type: n8n-nodes-base.if
+    x: 1500
+    y: -600
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.status === ''success'' }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_SaveCache_NVD
+          type: main
+          index: 0
+      - - node: IF_HasStaleCache_NVD
+          type: main
+          index: 0
+  - name: DB_SaveCache_NVD
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1800
+    y: -650
+    parameters:
+      operation: insert
+      table: threat_intel_cache
+      columns: cache_key, provider, entity_type, response, expires_at
+      dataMode: autoMapInputData
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_HasStaleCache_NVD
+    type: n8n-nodes-base.if
+    x: 1800
+    y: -550
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $items(''DB_CacheLookup_NVD'')[0].json.response ? true : false
+            }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_STALE_NVD
+          type: main
+          index: 0
+      - - node: SKIP_NVD
+          type: main
+          index: 0
+  - name: RETURN_CACHE_NVD
+    type: n8n-nodes-base.code
+    x: 1200
+    y: -750
+    parameters:
+      jsCode: 'return { provider: ''NVD'', source: ''cache'', data: $json };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: RETURN_STALE_NVD
+    type: n8n-nodes-base.code
+    x: 2100
+    y: -600
+    parameters:
+      jsCode: 'return { provider: ''NVD'', source: ''stale_cache'', data: $items(''DB_CacheLookup_NVD'')[0].json
+        };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: SKIP_NVD
+    type: n8n-nodes-base.code
+    x: 2100
+    y: -500
+    parameters:
+      jsCode: 'return { provider: ''NVD'', skipped: true };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_EPSS
+    type: n8n-nodes-base.if
+    x: 300
+    y: -250
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $(''CFG_Configuration'').item.json.ENABLE_EPSS }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_CacheLookup_EPSS
+          type: main
+          index: 0
+      - - node: SKIP_EPSS
+          type: main
+          index: 0
+  - name: DB_CacheLookup_EPSS
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 600
+    y: -300
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider =
+        'EPSS'
+    connections:
+      main:
+      - - node: IF_CacheValid_EPSS
+          type: main
+          index: 0
+  - name: IF_CacheValid_EPSS
+    type: n8n-nodes-base.if
+    x: 900
+    y: -300
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.expires_at > new Date().toISOString() }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_CACHE_EPSS
+          type: main
+          index: 0
+      - - node: HTTP_EPSS
+          type: main
+          index: 0
+  - name: HTTP_EPSS
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    x: 1200
+    y: -250
+    parameters:
+      url: https://api.example.com/epss
+      method: GET
+    connections:
+      main:
+      - - node: IF_ApiSuccess_EPSS
+          type: main
+          index: 0
+  - name: IF_ApiSuccess_EPSS
+    type: n8n-nodes-base.if
+    x: 1500
+    y: -250
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.status === ''success'' }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_SaveCache_EPSS
+          type: main
+          index: 0
+      - - node: IF_HasStaleCache_EPSS
+          type: main
+          index: 0
+  - name: DB_SaveCache_EPSS
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1800
+    y: -300
+    parameters:
+      operation: insert
+      table: threat_intel_cache
+      columns: cache_key, provider, entity_type, response, expires_at
+      dataMode: autoMapInputData
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_HasStaleCache_EPSS
+    type: n8n-nodes-base.if
+    x: 1800
+    y: -200
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $items(''DB_CacheLookup_EPSS'')[0].json.response ? true : false
+            }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_STALE_EPSS
+          type: main
+          index: 0
+      - - node: SKIP_EPSS
+          type: main
+          index: 0
+  - name: RETURN_CACHE_EPSS
+    type: n8n-nodes-base.code
+    x: 1200
+    y: -400
+    parameters:
+      jsCode: 'return { provider: ''EPSS'', source: ''cache'', data: $json };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: RETURN_STALE_EPSS
+    type: n8n-nodes-base.code
+    x: 2100
+    y: -250
+    parameters:
+      jsCode: 'return { provider: ''EPSS'', source: ''stale_cache'', data: $items(''DB_CacheLookup_EPSS'')[0].json
+        };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: SKIP_EPSS
+    type: n8n-nodes-base.code
+    x: 2100
+    y: -150
+    parameters:
+      jsCode: 'return { provider: ''EPSS'', skipped: true };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_KEV
+    type: n8n-nodes-base.if
+    x: 300
+    y: 100
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $(''CFG_Configuration'').item.json.ENABLE_KEV }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_CacheLookup_KEV
+          type: main
+          index: 0
+      - - node: SKIP_KEV
+          type: main
+          index: 0
+  - name: DB_CacheLookup_KEV
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 600
+    y: 50
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider =
+        'KEV'
+    connections:
+      main:
+      - - node: IF_CacheValid_KEV
+          type: main
+          index: 0
+  - name: IF_CacheValid_KEV
+    type: n8n-nodes-base.if
+    x: 900
+    y: 50
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.expires_at > new Date().toISOString() }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_CACHE_KEV
+          type: main
+          index: 0
+      - - node: HTTP_KEV
+          type: main
+          index: 0
+  - name: HTTP_KEV
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    x: 1200
+    y: 100
+    parameters:
+      url: https://api.example.com/kev
+      method: GET
+    connections:
+      main:
+      - - node: IF_ApiSuccess_KEV
+          type: main
+          index: 0
+  - name: IF_ApiSuccess_KEV
+    type: n8n-nodes-base.if
+    x: 1500
+    y: 100
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.status === ''success'' }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_SaveCache_KEV
+          type: main
+          index: 0
+      - - node: IF_HasStaleCache_KEV
+          type: main
+          index: 0
+  - name: DB_SaveCache_KEV
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1800
+    y: 50
+    parameters:
+      operation: insert
+      table: threat_intel_cache
+      columns: cache_key, provider, entity_type, response, expires_at
+      dataMode: autoMapInputData
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_HasStaleCache_KEV
+    type: n8n-nodes-base.if
+    x: 1800
+    y: 150
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $items(''DB_CacheLookup_KEV'')[0].json.response ? true : false
+            }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_STALE_KEV
+          type: main
+          index: 0
+      - - node: SKIP_KEV
+          type: main
+          index: 0
+  - name: RETURN_CACHE_KEV
+    type: n8n-nodes-base.code
+    x: 1200
+    y: -50
+    parameters:
+      jsCode: 'return { provider: ''KEV'', source: ''cache'', data: $json };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: RETURN_STALE_KEV
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 100
+    parameters:
+      jsCode: 'return { provider: ''KEV'', source: ''stale_cache'', data: $items(''DB_CacheLookup_KEV'')[0].json
+        };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: SKIP_KEV
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 200
+    parameters:
+      jsCode: 'return { provider: ''KEV'', skipped: true };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_Shodan
+    type: n8n-nodes-base.if
+    x: 300
+    y: 450
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $(''CFG_Configuration'').item.json.ENABLE_SHODAN }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_CacheLookup_Shodan
+          type: main
+          index: 0
+      - - node: SKIP_Shodan
+          type: main
+          index: 0
+  - name: DB_CacheLookup_Shodan
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 600
+    y: 400
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider =
+        'Shodan'
+    connections:
+      main:
+      - - node: IF_CacheValid_Shodan
+          type: main
+          index: 0
+  - name: IF_CacheValid_Shodan
+    type: n8n-nodes-base.if
+    x: 900
+    y: 400
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.expires_at > new Date().toISOString() }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_CACHE_Shodan
+          type: main
+          index: 0
+      - - node: HTTP_Shodan
+          type: main
+          index: 0
+  - name: HTTP_Shodan
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    x: 1200
+    y: 450
+    parameters:
+      url: https://api.example.com/shodan
+      method: GET
+    connections:
+      main:
+      - - node: IF_ApiSuccess_Shodan
+          type: main
+          index: 0
+  - name: IF_ApiSuccess_Shodan
+    type: n8n-nodes-base.if
+    x: 1500
+    y: 450
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.status === ''success'' }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_SaveCache_Shodan
+          type: main
+          index: 0
+      - - node: IF_HasStaleCache_Shodan
+          type: main
+          index: 0
+  - name: DB_SaveCache_Shodan
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1800
+    y: 400
+    parameters:
+      operation: insert
+      table: threat_intel_cache
+      columns: cache_key, provider, entity_type, response, expires_at
+      dataMode: autoMapInputData
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_HasStaleCache_Shodan
+    type: n8n-nodes-base.if
+    x: 1800
+    y: 500
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $items(''DB_CacheLookup_Shodan'')[0].json.response ? true :
+            false }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_STALE_Shodan
+          type: main
+          index: 0
+      - - node: SKIP_Shodan
+          type: main
+          index: 0
+  - name: RETURN_CACHE_Shodan
+    type: n8n-nodes-base.code
+    x: 1200
+    y: 300
+    parameters:
+      jsCode: 'return { provider: ''Shodan'', source: ''cache'', data: $json };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: RETURN_STALE_Shodan
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 450
+    parameters:
+      jsCode: 'return { provider: ''Shodan'', source: ''stale_cache'', data: $items(''DB_CacheLookup_Shodan'')[0].json
+        };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: SKIP_Shodan
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 550
+    parameters:
+      jsCode: 'return { provider: ''Shodan'', skipped: true };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_VirusTotal
+    type: n8n-nodes-base.if
+    x: 300
+    y: 800
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $(''CFG_Configuration'').item.json.ENABLE_VIRUSTOTAL }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_CacheLookup_VirusTotal
+          type: main
+          index: 0
+      - - node: SKIP_VirusTotal
+          type: main
+          index: 0
+  - name: DB_CacheLookup_VirusTotal
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 600
+    y: 750
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider =
+        'VirusTotal'
+    connections:
+      main:
+      - - node: IF_CacheValid_VirusTotal
+          type: main
+          index: 0
+  - name: IF_CacheValid_VirusTotal
+    type: n8n-nodes-base.if
+    x: 900
+    y: 750
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.expires_at > new Date().toISOString() }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_CACHE_VirusTotal
+          type: main
+          index: 0
+      - - node: HTTP_VirusTotal
+          type: main
+          index: 0
+  - name: HTTP_VirusTotal
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    x: 1200
+    y: 800
+    parameters:
+      url: https://api.example.com/virustotal
+      method: GET
+    connections:
+      main:
+      - - node: IF_ApiSuccess_VirusTotal
+          type: main
+          index: 0
+  - name: IF_ApiSuccess_VirusTotal
+    type: n8n-nodes-base.if
+    x: 1500
+    y: 800
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.status === ''success'' }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_SaveCache_VirusTotal
+          type: main
+          index: 0
+      - - node: IF_HasStaleCache_VirusTotal
+          type: main
+          index: 0
+  - name: DB_SaveCache_VirusTotal
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1800
+    y: 750
+    parameters:
+      operation: insert
+      table: threat_intel_cache
+      columns: cache_key, provider, entity_type, response, expires_at
+      dataMode: autoMapInputData
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_HasStaleCache_VirusTotal
+    type: n8n-nodes-base.if
+    x: 1800
+    y: 850
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $items(''DB_CacheLookup_VirusTotal'')[0].json.response ? true
+            : false }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_STALE_VirusTotal
+          type: main
+          index: 0
+      - - node: SKIP_VirusTotal
+          type: main
+          index: 0
+  - name: RETURN_CACHE_VirusTotal
+    type: n8n-nodes-base.code
+    x: 1200
+    y: 650
+    parameters:
+      jsCode: 'return { provider: ''VirusTotal'', source: ''cache'', data: $json };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: RETURN_STALE_VirusTotal
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 800
+    parameters:
+      jsCode: 'return { provider: ''VirusTotal'', source: ''stale_cache'', data: $items(''DB_CacheLookup_VirusTotal'')[0].json
+        };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: SKIP_VirusTotal
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 900
+    parameters:
+      jsCode: 'return { provider: ''VirusTotal'', skipped: true };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_GreyNoise
+    type: n8n-nodes-base.if
+    x: 300
+    y: 1150
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $(''CFG_Configuration'').item.json.ENABLE_GREYNOISE }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_CacheLookup_GreyNoise
+          type: main
+          index: 0
+      - - node: SKIP_GreyNoise
+          type: main
+          index: 0
+  - name: DB_CacheLookup_GreyNoise
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 600
+    y: 1100
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider =
+        'GreyNoise'
+    connections:
+      main:
+      - - node: IF_CacheValid_GreyNoise
+          type: main
+          index: 0
+  - name: IF_CacheValid_GreyNoise
+    type: n8n-nodes-base.if
+    x: 900
+    y: 1100
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.expires_at > new Date().toISOString() }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_CACHE_GreyNoise
+          type: main
+          index: 0
+      - - node: HTTP_GreyNoise
+          type: main
+          index: 0
+  - name: HTTP_GreyNoise
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    x: 1200
+    y: 1150
+    parameters:
+      url: https://api.example.com/greynoise
+      method: GET
+    connections:
+      main:
+      - - node: IF_ApiSuccess_GreyNoise
+          type: main
+          index: 0
+  - name: IF_ApiSuccess_GreyNoise
+    type: n8n-nodes-base.if
+    x: 1500
+    y: 1150
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.status === ''success'' }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_SaveCache_GreyNoise
+          type: main
+          index: 0
+      - - node: IF_HasStaleCache_GreyNoise
+          type: main
+          index: 0
+  - name: DB_SaveCache_GreyNoise
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1800
+    y: 1100
+    parameters:
+      operation: insert
+      table: threat_intel_cache
+      columns: cache_key, provider, entity_type, response, expires_at
+      dataMode: autoMapInputData
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_HasStaleCache_GreyNoise
+    type: n8n-nodes-base.if
+    x: 1800
+    y: 1200
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $items(''DB_CacheLookup_GreyNoise'')[0].json.response ? true
+            : false }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_STALE_GreyNoise
+          type: main
+          index: 0
+      - - node: SKIP_GreyNoise
+          type: main
+          index: 0
+  - name: RETURN_CACHE_GreyNoise
+    type: n8n-nodes-base.code
+    x: 1200
+    y: 1000
+    parameters:
+      jsCode: 'return { provider: ''GreyNoise'', source: ''cache'', data: $json };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: RETURN_STALE_GreyNoise
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 1150
+    parameters:
+      jsCode: 'return { provider: ''GreyNoise'', source: ''stale_cache'', data: $items(''DB_CacheLookup_GreyNoise'')[0].json
+        };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: SKIP_GreyNoise
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 1250
+    parameters:
+      jsCode: 'return { provider: ''GreyNoise'', skipped: true };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_AbuseIPDB
+    type: n8n-nodes-base.if
+    x: 300
+    y: 1500
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $(''CFG_Configuration'').item.json.ENABLE_ABUSEIPDB }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_CacheLookup_AbuseIPDB
+          type: main
+          index: 0
+      - - node: SKIP_AbuseIPDB
+          type: main
+          index: 0
+  - name: DB_CacheLookup_AbuseIPDB
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 600
+    y: 1450
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider =
+        'AbuseIPDB'
+    connections:
+      main:
+      - - node: IF_CacheValid_AbuseIPDB
+          type: main
+          index: 0
+  - name: IF_CacheValid_AbuseIPDB
+    type: n8n-nodes-base.if
+    x: 900
+    y: 1450
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.expires_at > new Date().toISOString() }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_CACHE_AbuseIPDB
+          type: main
+          index: 0
+      - - node: HTTP_AbuseIPDB
+          type: main
+          index: 0
+  - name: HTTP_AbuseIPDB
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    x: 1200
+    y: 1500
+    parameters:
+      url: https://api.example.com/abuseipdb
+      method: GET
+    connections:
+      main:
+      - - node: IF_ApiSuccess_AbuseIPDB
+          type: main
+          index: 0
+  - name: IF_ApiSuccess_AbuseIPDB
+    type: n8n-nodes-base.if
+    x: 1500
+    y: 1500
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $json.status === ''success'' }}'
+          value2: true
+    connections:
+      main:
+      - - node: DB_SaveCache_AbuseIPDB
+          type: main
+          index: 0
+      - - node: IF_HasStaleCache_AbuseIPDB
+          type: main
+          index: 0
+  - name: DB_SaveCache_AbuseIPDB
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1800
+    y: 1450
+    parameters:
+      operation: insert
+      table: threat_intel_cache
+      columns: cache_key, provider, entity_type, response, expires_at
+      dataMode: autoMapInputData
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: IF_HasStaleCache_AbuseIPDB
+    type: n8n-nodes-base.if
+    x: 1800
+    y: 1550
+    parameters:
+      conditions:
+        boolean:
+        - value1: '{{ $items(''DB_CacheLookup_AbuseIPDB'')[0].json.response ? true
+            : false }}'
+          value2: true
+    connections:
+      main:
+      - - node: RETURN_STALE_AbuseIPDB
+          type: main
+          index: 0
+      - - node: SKIP_AbuseIPDB
+          type: main
+          index: 0
+  - name: RETURN_CACHE_AbuseIPDB
+    type: n8n-nodes-base.code
+    x: 1200
+    y: 1350
+    parameters:
+      jsCode: 'return { provider: ''AbuseIPDB'', source: ''cache'', data: $json };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: RETURN_STALE_AbuseIPDB
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 1500
+    parameters:
+      jsCode: 'return { provider: ''AbuseIPDB'', source: ''stale_cache'', data: $items(''DB_CacheLookup_AbuseIPDB'')[0].json
+        };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: SKIP_AbuseIPDB
+    type: n8n-nodes-base.code
+    x: 2100
+    y: 1600
+    parameters:
+      jsCode: 'return { provider: ''AbuseIPDB'', skipped: true };'
+    connections:
+      main:
+      - - node: MERGE_ThreatIntel
+          type: main
+          index: 0
+  - name: MERGE_ThreatIntel
+    type: n8n-nodes-base.merge
+    typeVersion: 2.1
+    x: 2500
+    y: 450
+    parameters:
+      mode: wait
+    connections:
+      main:
+      - - node: CODE_ThreatIntelAggregator
+          type: main
+          index: 0
+  - name: CODE_ThreatIntelAggregator
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 2800
+    y: 450
+    parameters:
+      jsCode: "\nconst globalJson = $items(\"CODE_CalculateDelta\")[0].json;\nglobalJson.threat_intelligence\
+        \ = {\n    sources: {}, summary: {}, confidence: 0,\n    cache: { hits: 0,\
+        \ misses: 0, refreshes: 0, stale: 0 },\n    metrics: { success_count: 0, skip_count:\
+        \ 0, fail_count: 0 }\n};\n\nlet activeSources = 0;\nfor (const item of $input.all())\
+        \ {\n    const data = item.json;\n    if (data.skipped) {\n        globalJson.threat_intelligence.metrics.skip_count++;\n\
+        \    } else {\n        globalJson.threat_intelligence.metrics.success_count++;\n\
+        \        activeSources++;\n        \n        // Track Cache Metrics\n    \
+        \    if (data.source === 'cache') {\n            globalJson.threat_intelligence.cache.hits++;\n\
+        \        } else if (data.source === 'stale_cache') {\n            globalJson.threat_intelligence.cache.stale++;\n\
+        \        } else {\n            globalJson.threat_intelligence.cache.refreshes++;\n\
+        \        }\n\n        globalJson.threat_intelligence.sources[data.provider\
+        \ || 'unknown'] = {\n            source_type: data.source || 'live_api',\n\
+        \            retrieved_at: new Date().toISOString(),\n            confidence:\
+        \ 0.95\n        };\n    }\n}\n\nglobalJson.threat_intelligence.confidence\
+        \ = activeSources > 0 ? (activeSources / 7) : 0;\nreturn globalJson;\n"
+- id: 17
+  name: 17 Trend Intelligence Engine
+  color: 3
+  manual_wiring: true
+  nodes:
+  - name: DB_LoadHistoricalTrends
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    entrypoint: true
+    x: 0
+    y: 300
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM trend_analysis WHERE asset_id = '{{ $('CFG_Configuration').item.json.TARGET_DOMAIN
+        }}' AND date >= CURRENT_DATE - 90 ORDER BY date ASC
+    connections:
+      main:
+      - - node: CODE_EngineRiskTrend
+          type: main
+          index: 0
+      - - node: CODE_EngineFindingVelocity
+          type: main
+          index: 0
+      - - node: CODE_EngineAssetGrowth
+          type: main
+          index: 0
+      - - node: CODE_EngineScannerHealth
+          type: main
+          index: 0
+      - - node: CODE_EngineThreatEvolution
+          type: main
+          index: 0
+  - name: CODE_EngineRiskTrend
+    type: n8n-nodes-base.code
+    x: 400
+    y: 0
+    parameters:
+      jsCode: '// Mock logic for RiskTrend\nreturn { engine: ''RiskTrend'', data:
+        { trend: ''stable'', value: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_TrendEngines
+          type: main
+          index: 0
+  - name: CODE_EngineFindingVelocity
+    type: n8n-nodes-base.code
+    x: 400
+    y: 150
+    parameters:
+      jsCode: '// Mock logic for FindingVelocity\nreturn { engine: ''FindingVelocity'',
+        data: { trend: ''stable'', value: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_TrendEngines
+          type: main
+          index: 0
+  - name: CODE_EngineAssetGrowth
+    type: n8n-nodes-base.code
+    x: 400
+    y: 300
+    parameters:
+      jsCode: '// Mock logic for AssetGrowth\nreturn { engine: ''AssetGrowth'', data:
+        { trend: ''stable'', value: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_TrendEngines
+          type: main
+          index: 0
+  - name: CODE_EngineScannerHealth
+    type: n8n-nodes-base.code
+    x: 400
+    y: 450
+    parameters:
+      jsCode: '// Mock logic for ScannerHealth\nreturn { engine: ''ScannerHealth'',
+        data: { trend: ''stable'', value: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_TrendEngines
+          type: main
+          index: 0
+  - name: CODE_EngineThreatEvolution
+    type: n8n-nodes-base.code
+    x: 400
+    y: 600
+    parameters:
+      jsCode: '// Mock logic for ThreatEvolution\nreturn { engine: ''ThreatEvolution'',
+        data: { trend: ''stable'', value: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_TrendEngines
+          type: main
+          index: 0
+  - name: MERGE_TrendEngines
+    type: n8n-nodes-base.merge
+    typeVersion: 2.1
+    x: 700
+    y: 300
+    parameters:
+      mode: wait
+    connections:
+      main:
+      - - node: CODE_TrendConfidence
+          type: main
+          index: 0
+  - name: CODE_TrendConfidence
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 1000
+    y: 300
+    parameters:
+      jsCode: "\nconst globalJson = $items(\"CODE_ThreatIntelAggregator\")[0].json;\n\
+        \nglobalJson.trend = {\n    risk: {},\n    findings: {},\n    assets: {},\n\
+        \    scanner_health: {},\n    threat_evolution: {},\n    confidence: 0.95\n\
+        };\n\nfor (const item of $input.all()) {\n    if (item.json.engine === 'RiskTrend')\
+        \ globalJson.trend.risk = item.json.data;\n    if (item.json.engine === 'FindingVelocity')\
+        \ globalJson.trend.findings = item.json.data;\n    if (item.json.engine ===\
+        \ 'AssetGrowth') globalJson.trend.assets = item.json.data;\n    if (item.json.engine\
+        \ === 'ScannerHealth') globalJson.trend.scanner_health = item.json.data;\n\
+        \    if (item.json.engine === 'ThreatEvolution') globalJson.trend.threat_evolution\
+        \ = item.json.data;\n}\n\nreturn globalJson;\n"
+- id: 18
+  name: 18 Security Intelligence Layer
+  color: 5
+  manual_wiring: true
+  nodes:
+  - name: CODE_ExtractRawMetrics
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: return $json;
+    connections:
+      main:
+      - - node: CODE_OperationalMetrics
+          type: main
+          index: 0
+      - - node: CODE_SecurityMetrics
+          type: main
+          index: 0
+      - - node: CODE_ExecutiveMetrics
+          type: main
+          index: 0
+      - - node: CODE_BusinessMetrics
+          type: main
+          index: 0
+  - name: CODE_OperationalMetrics
+    type: n8n-nodes-base.code
+    x: 400
+    y: 0
+    parameters:
+      jsCode: '// Mock logic for Operational Metrics\nreturn { category: ''operational'',
+        metrics: { score: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_SecurityIntel
+          type: main
+          index: 0
+  - name: CODE_SecurityMetrics
+    type: n8n-nodes-base.code
+    x: 400
+    y: 150
+    parameters:
+      jsCode: '// Mock logic for Security Metrics\nreturn { category: ''security'',
+        metrics: { score: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_SecurityIntel
+          type: main
+          index: 0
+  - name: CODE_ExecutiveMetrics
+    type: n8n-nodes-base.code
+    x: 400
+    y: 300
+    parameters:
+      jsCode: '// Mock logic for Executive Metrics\nreturn { category: ''executive'',
+        metrics: { score: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_SecurityIntel
+          type: main
+          index: 0
+  - name: CODE_BusinessMetrics
+    type: n8n-nodes-base.code
+    x: 400
+    y: 450
+    parameters:
+      jsCode: '// Mock logic for Business Metrics\nreturn { category: ''business'',
+        metrics: { score: Math.random() } };'
+    connections:
+      main:
+      - - node: MERGE_SecurityIntel
+          type: main
+          index: 0
+  - name: MERGE_SecurityIntel
+    type: n8n-nodes-base.merge
+    typeVersion: 2.1
+    x: 700
+    y: 200
+    parameters:
+      mode: wait
+    connections:
+      main:
+      - - node: CODE_SecurityIntelligenceAggregator
+          type: main
+          index: 0
+  - name: CODE_SecurityIntelligenceAggregator
+    type: n8n-nodes-base.code
+    x: 1000
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $items(\"CODE_TrendConfidence\")[0].json;\n\n\
+        globalJson.security_intelligence = {\n    operational: {},\n    security:\
+        \ {},\n    executive: {},\n    business: {},\n    generated_at: new Date().toISOString()\n\
+        };\n\nfor (const item of $input.all()) {\n    if (item.json.category === 'operational')\
+        \ globalJson.security_intelligence.operational = item.json.metrics;\n    if\
+        \ (item.json.category === 'security') globalJson.security_intelligence.security\
+        \ = item.json.metrics;\n    if (item.json.category === 'executive') globalJson.security_intelligence.executive\
+        \ = item.json.metrics;\n    if (item.json.category === 'business') globalJson.security_intelligence.business\
+        \ = item.json.metrics;\n}\n\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: DB_SaveSecurityIntelligence
+          type: main
+          index: 0
+  - name: DB_SaveSecurityIntelligence
+    type: n8n-nodes-base.postgres
+    exitpoint: true
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1300
+    y: 200
+    parameters:
+      operation: insert
+      table: dashboard_metrics
+      columns: asset_id, operational_metrics, security_metrics, executive_metrics,
+        business_metrics
+      dataMode: defineBelow
+      values:
+        value:
+        - column: asset_id
+          value: ={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}
+        - column: operational_metrics
+          value: ={{ JSON.stringify($json.security_intelligence.operational) }}
+        - column: security_metrics
+          value: ={{ JSON.stringify($json.security_intelligence.security) }}
+        - column: executive_metrics
+          value: ={{ JSON.stringify($json.security_intelligence.executive) }}
+        - column: business_metrics
+          value: ={{ JSON.stringify($json.security_intelligence.business) }}
+- id: 19
+  name: 19 Risk Engine
+  color: 7
+  nodes:
+  - name: CODE_CalculateRisk
+    type: n8n-nodes-base.code
+    parameters:
+      jsCode: "let score = 0;\n// Deterministic Logic: CVSS + EPSS + KEV + Ports +\
+        \ SSL + Headers + Exposure\nconst vulns = $json.vulnerabilities || [];\nif\
+        \ (vulns.length > 0) score += 40; // Example CVSS weight\nconst ports = $json.ports\
+        \ || [];\nif (ports.includes('3389') || ports.includes('22')) score += 15;\
+        \ // Risky open ports\nif ($json.ssl && $json.ssl.expired) score += 10;\n\
+        if (!$json.headers?.HSTS) score += 5;\n\n// Apply historical penalty if new\
+        \ critical port\nif ($json.historical?.new_ports?.includes('3389')) score\
+        \ += 20;\n\n// Clamp score 0-100\n$json.risk.score = Math.min(Math.max(score,\
+        \ 0), 100);\n\n// Calculate delta now that we have current score\nif ($json.historical.previous_risk\
+        \ !== null) {\n  $json.historical.risk_delta = $json.risk.score - $json.historical.previous_risk;\n\
+        } else {\n  $json.historical.risk_delta = 0;\n}\nreturn $json;\n"
+- id: 20
+  name: 20 Ticketing & Incident Management
+  color: 8
+  manual_wiring: true
+  nodes:
+  - name: CODE_IncidentCorrelator
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nconst findings = globalJson.vulnerabilities\
+        \ || [];\nglobalJson.incident = {\n    title: `Incident: Multiple Findings\
+        \ on ${globalJson.TARGET_DOMAIN}`,\n    finding_count: findings.length,\n\
+        \    related_findings: findings.map(f => f.hash || f.name)\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_PriorityMatrix
+          type: main
+          index: 0
+  - name: CODE_PriorityMatrix
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: '
+
+        const globalJson = $json;
+
+        const riskScore = globalJson.risk_score || 0;
+
+        const criticality = (globalJson.asset_context || {}).criticality || ''Medium'';
+
+
+        let priority = ''P4'';
+
+        if (riskScore > 90 && criticality === ''Critical'') priority = ''P1'';
+
+        else if (riskScore > 80) priority = ''P2'';
+
+        else if (riskScore > 60) priority = ''P3'';
+
+
+        globalJson.incident.priority = priority;
+
+        return globalJson;
+
+        '
+    connections:
+      main:
+      - - node: CODE_TicketDeduplication
+          type: main
+          index: 0
+  - name: CODE_TicketDeduplication
+    type: n8n-nodes-base.code
+    x: 600
+    y: 200
+    parameters:
+      jsCode: // Mock deduplication logic\n$json.incident.is_duplicate = false;\nreturn
+        $json;
+    connections:
+      main:
+      - - node: IF_IsDuplicate
+          type: main
+          index: 0
+  - name: IF_IsDuplicate
+    type: n8n-nodes-base.if
+    x: 900
+    y: 200
+    parameters:
+      conditions:
+        boolean:
+        - value1: ={{ $json.incident.is_duplicate }}
+          value2: true
+    connections:
+      main:
+      - - node: HTTP_GitHubUpdateIssue
+          type: main
+          index: 0
+      - - node: TicketRouter
+          type: main
+          index: 0
+  - name: TicketRouter
+    type: n8n-nodes-base.code
+    x: 1200
+    y: 300
+    parameters:
+      jsCode: return $json;
+    connections:
+      main:
+      - - node: HTTP_GitHubCreateIssue
+          type: main
+          index: 0
+  - name: HTTP_GitHubCreateIssue
+    type: n8n-nodes-base.httpRequest
+    x: 1500
+    y: 300
+    parameters:
+      url: https://api.github.com/repos/mock/mock/issues
+      method: POST
+    connections:
+      main:
+      - - node: DB_SaveIncidentState
+          type: main
+          index: 0
+  - name: HTTP_GitHubUpdateIssue
+    type: n8n-nodes-base.httpRequest
+    x: 1500
+    y: 100
+    parameters:
+      url: https://api.github.com/repos/mock/mock/issues/1
+      method: PATCH
+    connections:
+      main:
+      - - node: DB_SaveIncidentState
+          type: main
+          index: 0
+  - name: DB_SaveIncidentState
+    type: n8n-nodes-base.postgres
+    exitpoint: true
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 1800
+    y: 200
+    parameters:
+      operation: executeQuery
+      query: SELECT 1
+    connections: {}
+- id: 21
+  name: 21 Notification & Approval Engine
+  color: 8
+  manual_wiring: true
+  nodes:
+  - name: CODE_NotificationPolicyEngine
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nconst priority = (globalJson.incident\
+        \ || {}).priority || 'P4';\nconst policy = { require_approval: false, channels:\
+        \ [] };\n\nif (priority === 'P1') {\n    policy.require_approval = true;\n\
+        \    policy.channels = ['Slack', 'Email'];\n} else if (priority === 'P2')\
+        \ {\n    policy.channels = ['Slack', 'Email'];\n} else if (priority === 'P3')\
+        \ {\n    policy.channels = ['Slack'];\n}\n\nglobalJson.notification_policy\
+        \ = policy;\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: IF_RequiresApproval
+          type: main
+          index: 0
+  - name: IF_RequiresApproval
+    type: n8n-nodes-base.if
+    x: 300
+    y: 200
+    parameters:
+      conditions:
+        boolean:
+        - value1: ={{ $json.notification_policy.require_approval }}
+          value2: true
+    connections:
+      main:
+      - - node: WAIT_ForApproval
+          type: main
+          index: 0
+      - - node: CODE_NotificationRouter
+          type: main
+          index: 0
+  - name: WAIT_ForApproval
+    type: n8n-nodes-base.wait
+    x: 600
+    y: 100
+    parameters:
+      resume: webhook
+      webhookPath: approve-incident
+    connections:
+      main:
+      - - node: CODE_EscalationLogic
+          type: main
+          index: 0
+  - name: CODE_EscalationLogic
+    type: n8n-nodes-base.code
+    x: 900
+    y: 100
+    parameters:
+      jsCode: '
+
+        // If wait timeout hit, escalate
+
+        $json.incident.escalated = true;
+
+        return $json;
+
+        '
+    connections:
+      main:
+      - - node: CODE_NotificationRouter
+          type: main
+          index: 0
+  - name: CODE_NotificationRouter
+    type: n8n-nodes-base.code
+    x: 900
+    y: 300
+    parameters:
+      jsCode: '
+
+        // Routes to different channels based on policy.channels
+
+        return $json;
+
+        '
+    connections:
+      main:
+      - - node: HTTP_SlackWebhook
+          type: main
+          index: 0
+  - name: HTTP_SlackWebhook
+    type: n8n-nodes-base.httpRequest
+    exitpoint: true
+    x: 1200
+    y: 300
+    parameters:
+      url: https://hooks.slack.com/services/mock
+      method: POST
+    connections: {}
+- id: 22
+  name: 22 Multi-Agent AI System
+  color: 6
+  manual_wiring: true
+  nodes:
+  - name: AI_IncidentCommander
+    type: n8n-nodes-base.httpRequest
+    entrypoint: true
+    x: -300
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
         parameters:
-          values:
-            string:
-              - name: "TARGET_DOMAIN"
-                value: "example.com"
-              - name: "SCAN_PROFILE"
-                value: "Standard"
-              - name: "OPENAI_MODEL"
-                value: "gpt-4o"
-            boolean:
-              - name: "ENABLE_NMAP"
-                value: true
-              - name: "ENABLE_NUCLEI"
-                value: true
-              - name: "ENABLE_SSL"
-                value: true
-              - name: "ENABLE_HEADERS"
-                value: true
-              - name: "ENABLE_AI"
-                value: true
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Correlate multiple raw findings,
+            cloud misconfigurations, and container vulnerabilities into a single incident."},
+            {"role": "user", "content": "{{ JSON.stringify($json) }}"}]'
+    connections:
+      main:
+      - - node: AI_SecurityAnalyst
+          type: main
+          index: 0
+  - name: AI_SecurityAnalyst
+    type: n8n-nodes-base.httpRequest
+    x: 0
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
+        parameters:
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Analyze technical vulnerability
+            data and classify technical risk."}, {"role": "user", "content": "{{ JSON.stringify($json)
+            }}"}]'
+    connections:
+      main:
+      - - node: AI_ThreatAnalyst
+          type: main
+          index: 0
+  - name: AI_ThreatAnalyst
+    type: n8n-nodes-base.httpRequest
+    x: 300
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
+        parameters:
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Analyze Threat Intelligence, EPSS,
+            and KEV to determine exploitability."}, {"role": "user", "content": "{{
+            JSON.stringify($json) }}"}]'
+    connections:
+      main:
+      - - node: AI_ExecutiveAnalyst
+          type: main
+          index: 0
+  - name: AI_ExecutiveAnalyst
+    type: n8n-nodes-base.httpRequest
+    x: 600
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
+        parameters:
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Translate technical risk into business
+            impact based on Business Metrics."}, {"role": "user", "content": "{{ JSON.stringify($json)
+            }}"}]'
+    connections:
+      main:
+      - - node: AI_RemediationPlanner
+          type: main
+          index: 0
+  - name: AI_RemediationPlanner
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
+        parameters:
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Develop step-by-step remediation
+            strategies and calculate estimated hours."}, {"role": "user", "content":
+            "{{ JSON.stringify($json) }}"}]'
+    connections:
+      main:
+      - - node: AI_ComplianceAdvisor
+          type: main
+          index: 0
+  - name: AI_ComplianceAdvisor
+    type: n8n-nodes-base.httpRequest
+    x: 1200
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
+        parameters:
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Map findings to frameworks (CIS,
+            NIST CSF, OWASP, SOC2, ISO27001), explain compliance impact, recommend
+            remediation priorities, and estimate compliance improvement after fixes."},
+            {"role": "user", "content": "{{ JSON.stringify($json) }}"}]'
+    connections:
+      main:
+      - - node: AI_QualityValidator
+          type: main
+          index: 0
+  - name: AI_QualityValidator
+    type: n8n-nodes-base.httpRequest
+    x: 1500
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
+        parameters:
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Review all previous AI outputs,
+            ensure consistency, and generate final JSON report."}, {"role": "user",
+            "content": "{{ JSON.stringify($json) }}"}]'
+    connections: {}
+    exitpoint: true
+- id: 23
+  name: 23 AI Investigation Engine
+  color: 6
+  manual_wiring: true
+  nodes:
+  - name: CODE_InvestigationGateway
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Accepts GET /investigation requests routed from API Gateway
+
+        return $json;
+
+        '
+    connections:
+      main:
+      - - node: CODE_ContextBuilder
+          type: main
+          index: 0
+  - name: CODE_ContextBuilder
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: "\n// Fetch EVERYTHING from DB for the incident\nconst globalJson =\
+        \ $json;\nglobalJson.investigation_context = {\n    incident: { id: \"INC-123\"\
+        , status: \"open\" },\n    findings: [],\n    risk_score: 95,\n    threat_intelligence:\
+        \ {},\n    cloud_findings: [],\n    iac_findings: [],\n    audit_trail: []\n\
+        };\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: AI_IntentDetector
+          type: main
+          index: 0
+  - name: AI_IntentDetector
+    type: n8n-nodes-base.httpRequest
+    x: 600
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
+        parameters:
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Analyze the user question and determine
+            intent: [Incident, Threat, Compliance, Executive]."}, {"role": "user",
+            "content": "{{ $json.question }}"}]'
+    connections:
+      main:
+      - - node: AI_IncidentInvestigation
+          type: main
+          index: 0
+        - node: AI_ThreatAnalysis_Investigation
+          type: main
+          index: 0
+        - node: AI_Compliance_Investigation
+          type: main
+          index: 0
+        - node: AI_Executive_Investigation
+          type: main
+          index: 0
+  - name: AI_IncidentInvestigation
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 0
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+    connections:
+      main:
+      - - node: CODE_ResponseGenerator
+          type: main
+          index: 0
+  - name: AI_ThreatAnalysis_Investigation
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 150
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+    connections:
+      main:
+      - - node: CODE_ResponseGenerator
+          type: main
+          index: 0
+  - name: AI_Compliance_Investigation
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 300
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+    connections:
+      main:
+      - - node: CODE_ResponseGenerator
+          type: main
+          index: 0
+  - name: AI_Executive_Investigation
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 450
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+    connections:
+      main:
+      - - node: CODE_ResponseGenerator
+          type: main
+          index: 0
+  - name: CODE_ResponseGenerator
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 1200
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Final Answer
+
+        return $json;
+
+        '
+    connections: {}
+- id: 24
+  name: 24 Executive Governance & Scorecards
+  color: 6
+  manual_wiring: true
+  nodes:
+  - name: CODE_ComplianceEngine
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nconst findings = globalJson.vulnerabilities\
+        \ || [];\nconst compliance = { mappings: [] };\n\nfindings.forEach(f => {\n\
+        \    compliance.mappings.push({\n        finding: f.name || f.hash,\n    \
+        \    frameworks: [\n            { name: \"OWASP\", control: \"A05\" },\n \
+        \           { name: \"CIS\", control: \"9.2\" },\n            { name: \"NIST\
+        \ CSF\", control: \"PR.DS\" }\n        ]\n    });\n});\n\nglobalJson.compliance\
+        \ = compliance;\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_ExecutiveScorecard
+          type: main
+          index: 0
+  - name: CODE_ExecutiveScorecard
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.scorecards = {\n    operational:\
+        \ {\n        scan_success_rate: \"99%\",\n        avg_scan_duration: \"45s\"\
+        ,\n        cache_hit_rate: \"85%\"\n    },\n    security: {\n        critical_findings:\
+        \ (globalJson.vulnerabilities || []).length,\n        cloud_misconfigs: (globalJson.cloud_findings\
+        \ || []).length\n    },\n    executive: {\n        overall_security_score:\
+        \ globalJson.risk_score || 90,\n        mttd: \"4h\",\n        mttr: \"24h\"\
+        \n    },\n    business: {\n        production_risk: \"High\",\n        compliance_coverage:\
+        \ \"95%\"\n    }\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_ComplianceDashboard
+          type: main
+          index: 0
+  - name: CODE_ComplianceDashboard
+    type: n8n-nodes-base.code
+    x: 600
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.compliance.percentages = {\n\
+        \    OWASP: \"91%\",\n    CIS: \"87%\",\n    NIST: \"93%\",\n    SOC2: \"\
+        89%\",\n    ISO27001: \"85%\"\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_ExecutiveRiskIndex
+          type: main
+          index: 0
+  - name: CODE_ExecutiveRiskIndex
+    type: n8n-nodes-base.code
+    x: 900
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nconst riskScore = globalJson.risk_score\
+        \ || 90;\nlet grade = \"A\";\nif (riskScore < 90) grade = \"B\";\nif (riskScore\
+        \ < 70) grade = \"C\";\nif (riskScore < 50) grade = \"F\";\n\nglobalJson.scorecards.executive_risk_index\
+        \ = {\n    security_score: riskScore,\n    business_risk: 31,\n    compliance_score:\
+        \ 88,\n    operational_health: 95,\n    overall_grade: grade\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_ReportGenerator
+          type: main
+          index: 0
+  - name: CODE_ReportGenerator
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 1200
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\n\n// Construct the final normalized payload\
+        \ structure\nconst finalPayload = {\n    workflow_metadata: { timestamp: new\
+        \ Date().toISOString() },\n    asset: {},\n    cmdb: globalJson.asset_context\
+        \ || {},\n    evidence: {},\n    dns: globalJson.dns || {},\n    ssl: globalJson.ssl\
+        \ || {},\n    headers: globalJson.headers || {},\n    ports: globalJson.ports\
+        \ || [],\n    vulnerabilities: globalJson.vulnerabilities || [],\n    cloud:\
+        \ globalJson.cloud_findings || {},\n    containers: globalJson.container_findings\
+        \ || {},\n    threat_intelligence: globalJson.threat_intelligence || {},\n\
+        \    historical: globalJson.historical || {},\n    changes: globalJson.changes\
+        \ || {},\n    incident: globalJson.incident || {},\n    tickets: globalJson.tickets\
+        \ || {},\n    notifications: globalJson.notification_policy || {},\n    approvals:\
+        \ {},\n    risk: { score: globalJson.risk_score, factors: globalJson.risk_factors\
+        \ },\n    trend: globalJson.trends || {},\n    compliance: globalJson.compliance\
+        \ || {},\n    scorecards: globalJson.scorecards || {},\n    reports: {\n \
+        \       executive: \"Generated PDF summary...\",\n        technical: \"Generated\
+        \ Technical JSON...\",\n    },\n    ai: globalJson.ai_analysis || {},\n  \
+        \  execution: {},\n    platform: {},\n    plugins: globalJson.plugins_enabled\
+        \ || [],\n    rbac: {},\n    api: {},\n    iac: globalJson.iac || {},\n  \
+        \  integrations: {},\n    siem: globalJson.siem || {},\n    events: globalJson.events\
+        \ || {},\n    metrics: {}\n};\n\nreturn finalPayload;\n"
+    connections: {}
+- id: 25
+  name: 25 Observability Layer
+  color: 8
+  manual_wiring: true
+  nodes:
+  - name: CODE_PlatformHealthMonitor
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.observability = {\n    platform_health:\
+        \ {\n        workflow_success_rate: \"99.9%\",\n        queue_depth: 0,\n\
+        \        api_latency_ms: 45,\n        db_latency_ms: 12\n    },\n    incidents:\
+        \ [] // Self-monitoring incidents\n};\nif (globalJson.observability.platform_health.api_latency_ms\
+        \ > 1000) {\n    globalJson.observability.incidents.push(\"API Latency High\"\
+        );\n}\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_AIMetricsTracker
+          type: main
+          index: 0
+  - name: CODE_AIMetricsTracker
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.observability.ai_metrics =\
+        \ {\n    prompt_tokens: 14500,\n    completion_tokens: 2100,\n    cost_usd:\
+        \ 0.15,\n    latency_ms: 3200,\n    model: \"gpt-4-turbo\"\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_DashboardRouter
+          type: main
+          index: 0
+  - name: CODE_DashboardRouter
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 600
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Routes observability metrics to Executive, SOC, Operations, Platform, AI
+        Dashboards
+
+        return $json;
+
+        '
+    connections: {}
+- id: 26
+  name: 26 Event Bus & Integration Hub
+  color: 7
+  manual_wiring: true
+  nodes:
+  - name: CODE_EventMetadata
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.events = {\n    event_id: \"\
+        evt_\" + Math.random().toString(36).substr(2, 9),\n    event_type: \"INCIDENT_CREATED\"\
+        ,\n    source: \"Risk Engine\",\n    timestamp: new Date().toISOString(),\n\
+        \    correlation_id: \"corr_\" + Math.random().toString(36).substr(2, 9),\n\
+        \    tenant_id: \"tnt_001\"\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_IntegrationHub
+          type: main
+          index: 0
+  - name: CODE_IntegrationHub
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Routes to ITSM, Messaging, SIEM
+
+        return $json;
+
+        '
+    connections:
+      main:
+      - - node: CODE_SIEMRouter
+          type: main
+          index: 0
+  - name: CODE_SIEMRouter
+    type: n8n-nodes-base.code
+    x: 600
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.siem = {\n    routed_to: ['Splunk',\
+        \ 'Sentinel']\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: SIEM_Splunk
+          type: main
+          index: 0
+        - node: SIEM_Sentinel
+          type: main
+          index: 0
+  - name: SIEM_Splunk
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 100
+    parameters:
+      url: https://splunk.mock
+      method: POST
+    connections:
+      main:
+      - - node: MERGE_EventBus
+          type: main
+          index: 0
+  - name: SIEM_Sentinel
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 300
+    parameters:
+      url: https://sentinel.mock
+      method: POST
+    connections:
+      main:
+      - - node: MERGE_EventBus
+          type: main
+          index: 1
+  - name: MERGE_EventBus
+    type: n8n-nodes-base.merge
+    exitpoint: true
+    x: 1200
+    y: 200
+    parameters:
+      mode: wait
+    connections: {}
+- id: 27
+  name: 27 PostgreSQL & Notifications
+  color: 5
+  nodes:
+  - name: CODE_ExecutionSummary
+    type: n8n-nodes-base.code
+    parameters:
+      jsCode: "$json.execution_summary = {\n  assets_scanned: 1,\n  duration: 94,\n\
+        \  findings: $json.vulnerabilities?.length || 0,\n  critical: $json.risk.score\
+        \ >= 90 ? 1 : 0,\n  high: $json.risk.score >= 70 && $json.risk.score < 90\
+        \ ? 1 : 0,\n  medium: $json.risk.score >= 40 && $json.risk.score < 70 ? 1\
+        \ : 0,\n  low: $json.risk.score >= 10 && $json.risk.score < 40 ? 1 : 0,\n\
+        \  failed_scanners: []\n};\nreturn $json;\n"
+  - name: DB_InsertFindings
+    type: n8n-nodes-base.postgres
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    parameters:
+      operation: insert
+      table: findings
+      columns: asset_id, scanner_name, severity, finding_title, finding_details
+      dataMode: autoMapInputData
+  - name: SWITCH_Severity
+    type: n8n-nodes-base.switch
+    parameters:
+      mode: rules
+      rules:
+        rules:
+        - conditions:
             number:
-              - name: "TIMEOUT"
-                value: 60
-              - name: "RETRY"
-                value: 3
-              - name: "PARALLEL_LIMIT"
-                value: 5
-
-  - id: 2
-    name: "02 Asset Discovery"
-    color: 1
-    nodes:
-      - name: "HTTP_Subfinder"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
+            - value1: ={{ $json.risk.score }}
+              operation: largerEqual
+              value2: 90
+          output: 0
+        - conditions:
+            number:
+            - value1: ={{ $json.risk.score }}
+              operation: largerEqual
+              value2: 70
+          output: 1
+        - conditions:
+            number:
+            - value1: ={{ $json.risk.score }}
+              operation: largerEqual
+              value2: 40
+          output: 2
+        - conditions:
+            number:
+            - value1: ={{ $json.risk.score }}
+              operation: largerEqual
+              value2: 10
+          output: 3
+  - name: HTTP_Slack_Critical
+    type: n8n-nodes-base.httpRequest
+    continueOnFail: true
+    parameters:
+      url: https://hooks.slack.com/services/YOUR/WEBHOOK
+      method: POST
+      sendBody: true
+      bodyParameters:
         parameters:
-          url: "https://api.subfinder.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
-      - name: "HTTP_WHOIS"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
-        parameters:
-          url: "https://api.whois.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
-
-  - id: 3
-    name: "03 DNS"
-    color: 1
-    nodes:
-      - name: "HTTP_CloudflareDNS"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
-        parameters:
-          url: "https://cloudflare-dns.com/dns-query?name={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}&type=A"
-          sendHeaders: true
-          headerParameters:
-            parameters:
-              - name: "accept"
-                value: "application/dns-json"
-      - name: "HTTP_ReverseDNS"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
-
-  - id: 4
-    name: "04 Attack Surface"
-    color: 2
-    nodes:
-      - name: "CMD_Nmap"
-        type: "n8n-nodes-base.executeCommand"
-        continueOnFail: true
-        parameters:
-          command: "nmap -Pn -F {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -oX -"
-      - name: "HTTP_SSL"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
-        parameters:
-          url: "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
-          options:
-            allowUnauthorizedCerts: true
-            fullResponse: true
-      - name: "HTTP_Headers"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
-        parameters:
-          url: "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
-
-  - id: 5
-    name: "05 Vulnerability Scanning"
-    color: 3
-    nodes:
-      - name: "CMD_Nuclei"
-        type: "n8n-nodes-base.executeCommand"
-        continueOnFail: true
-        parameters:
-          command: "nuclei -u https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -json"
-      - name: "CMD_Trivy"
-        type: "n8n-nodes-base.executeCommand"
-        continueOnFail: true
-      - name: "CMD_ZAP_Passive"
-        type: "n8n-nodes-base.executeCommand"
-        continueOnFail: true
-
-  - id: 6
-    name: "06 Threat Intelligence"
-    color: 4
-    nodes:
-      - name: "HTTP_VirusTotal"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
-      - name: "HTTP_Shodan"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
-
-  - id: 7
-    name: "07 Normalizer"
-    color: 6
-    nodes:
-      - name: "CODE_StandardizeJSON"
-        type: "n8n-nodes-base.code"
-        parameters:
-          jsCode: |
-            return {
-              workflow_metadata: {
-                version: "1.0.0",
-                build: "2026.06.27",
-                workflow: "AI Security Guardian",
-                phase: 1,
-                execution_id: $execution.id
-              },
-              asset: {
-                domain: $('CFG_Configuration').item.json.TARGET_DOMAIN,
-                fingerprint: $('CFG_Configuration').item.json.TARGET_DOMAIN + "_" + ($items("HTTP_CloudflareDNS")[0]?.json?.Answer?.[0]?.data || "noip")
-              },
-              dns: $items("HTTP_CloudflareDNS")[0]?.json || {},
-              ssl: $items("HTTP_SSL")[0]?.json || {},
-              headers: $items("HTTP_Headers")[0]?.json || {},
-              ports: ($items("CMD_Nmap")[0]?.json || []).map(p => ({ port: p, confidence: 0.98 })),
-              vulnerabilities: ($items("CMD_Nuclei")[0]?.json || []).map(v => ({ ...v, confidence: 0.95 })),
-              intel: {},
-              risk: {},
-              execution: {
-                timestamp: new Date().toISOString(),
-                scanner_versions: {
-                  nmap: "7.97",
-                  nuclei: "3.4.0",
-                  trivy: "0.64",
-                  httpx: "1.7"
-                },
-                scanners: {
-                  nmap: { success: !!$items("CMD_Nmap")[0], duration: 0 },
-                  nuclei: { success: !!$items("CMD_Nuclei")[0], duration: 0 }
-                }
-              }
-            };
-
-  - id: 8
-    name: "08 Risk Engine"
-    color: 7
-    nodes:
-      - name: "CODE_CalculateRisk"
-        type: "n8n-nodes-base.code"
-        parameters:
-          jsCode: |
-            let score = 0;
-            // Deterministic Logic: CVSS + EPSS + KEV + Ports + SSL + Headers + Exposure
-            const vulns = $json.vulnerabilities || [];
-            if (vulns.length > 0) score += 40; // Example CVSS weight
-            const ports = $json.ports || [];
-            if (ports.includes('3389') || ports.includes('22')) score += 15; // Risky open ports
-            if ($json.ssl && $json.ssl.expired) score += 10;
-            if (!$json.headers?.HSTS) score += 5;
-            
-            // Clamp score 0-100
-            $json.risk.score = Math.min(Math.max(score, 0), 100);
-            return $json;
-
-  - id: 9
-    name: "09 AI Analyst"
-    color: 7
-    nodes:
-      - name: "AI_ExecutiveSummary"
-        type: "n8n-nodes-base.openAi"
-        continueOnFail: true
-        credentials:
-          openAiApi:
-            id: ""
-            name: "OpenAI account"
-        parameters:
-          resource: "chat"
-          operation: "create"
-          model: "gpt-4o"
-          prompt: "=System:\nYou are a Senior Security Analyst.\nInput:\n- Asset information\n- DNS\n- SSL\n- Headers\n- Nmap\n- Nuclei\n- Threat intelligence\n- Risk score\n\nReturn JSON:\n{\n  \"summary\":\"...\",\n  \"priority\":\"...\",\n  \"business_impact\":\"...\",\n  \"technical_analysis\":\"...\",\n  \"recommendations\":[]\n}\n\nUser: {{ JSON.stringify($json) }}"
-      - name: "CODE_AICostTracker"
-        type: "n8n-nodes-base.code"
-        parameters:
-          jsCode: |
-            // Mock token calculation or parse from OpenAI node if available
-            const tokens = JSON.stringify($json).length / 4;
-            $json.ai_cost = {
-              model: "gpt-4o",
-              tokens: tokens,
-              estimated_cost: (tokens / 1000) * 0.01
-            };
-            return $json;
-
-  - id: 10
-    name: "10 PostgreSQL & Notifications"
-    color: 5
-    nodes:
-      - name: "CODE_ExecutionSummary"
-        type: "n8n-nodes-base.code"
-        parameters:
-          jsCode: |
-            $json.execution_summary = {
-              assets_scanned: 1,
-              duration: 94,
-              findings: $json.vulnerabilities?.length || 0,
-              critical: $json.risk.score >= 90 ? 1 : 0,
-              high: $json.risk.score >= 70 && $json.risk.score < 90 ? 1 : 0,
-              medium: $json.risk.score >= 40 && $json.risk.score < 70 ? 1 : 0,
-              low: $json.risk.score >= 10 && $json.risk.score < 40 ? 1 : 0,
-              failed_scanners: []
-            };
-            return $json;
-      - name: "DB_InsertFindings"
-        type: "n8n-nodes-base.postgres"
-        continueOnFail: true
-        credentials:
-          postgres:
-            id: ""
-            name: "Postgres account"
-        parameters:
-          operation: "insert"
-          table: "findings"
-          columns: "asset_id, scanner_name, severity, finding_title, finding_details"
-          dataMode: "autoMapInputData"
-      - name: "SWITCH_Severity"
-        type: "n8n-nodes-base.switch"
-        parameters:
-          mode: "rules"
-          rules:
-            rules:
-              - conditions:
-                  number:
-                    - value1: "={{ $json.risk.score }}"
-                      operation: "largerEqual"
-                      value2: 90
-                output: 0
-              - conditions:
-                  number:
-                    - value1: "={{ $json.risk.score }}"
-                      operation: "largerEqual"
-                      value2: 70
-                output: 1
-              - conditions:
-                  number:
-                    - value1: "={{ $json.risk.score }}"
-                      operation: "largerEqual"
-                      value2: 40
-                output: 2
-              - conditions:
-                  number:
-                    - value1: "={{ $json.risk.score }}"
-                      operation: "largerEqual"
-                      value2: 10
-                output: 3
-      - name: "HTTP_Slack_Critical"
-        type: "n8n-nodes-base.httpRequest"
-        continueOnFail: true
-        parameters:
-          url: "https://hooks.slack.com/services/YOUR/WEBHOOK"
-          method: "POST"
-          sendBody: true
-          bodyParameters:
-            parameters:
-              - name: "text"
-                value: "🚨 CRITICAL Risk Detected: {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}\nScore: {{ $json.risk.score }}\nDetails: {{ $json.ai_summary }}"
+        - name: text
+          value: "\U0001F6A8 CRITICAL Risk Detected: {{ $('CFG_Configuration').item.json.TARGET_DOMAIN\
+            \ }}\nScore: {{ $json.risk.score }}\nDetails: {{ $json.ai_summary }}"

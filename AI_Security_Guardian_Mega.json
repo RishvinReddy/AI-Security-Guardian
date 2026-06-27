@@ -2,8 +2,8 @@
   "name": "AI Security Guardian Mega Workflow",
   "nodes": [
     {
-      "id": "ff9b9b07-1604-49ab-92ba-14660ce2930a",
-      "name": "Sticky Note: 01 Configuration",
+      "id": "32a18864-e88b-44c3-b92c-56bc73b67738",
+      "name": "Sticky Note: 01 API Gateway & RBAC",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -11,20 +11,211 @@
         0
       ],
       "parameters": {
-        "content": "## 01 Configuration",
-        "height": 400,
-        "width": 800,
+        "content": "## 01 API Gateway & RBAC",
+        "height": 800,
+        "width": 1200,
         "color": 6
       }
     },
     {
-      "id": "c3cce528-ad19-417e-b2dd-cabf67f69143",
+      "id": "2e5f2ca9-500d-498c-b7aa-aed3c65a719a",
+      "name": "API_Scan",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "path": "api/v1/scan",
+        "httpMethod": "POST",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "075f5dad-23f4-4f50-819b-2932834217e7",
+      "name": "API_Investigation",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        150
+      ],
+      "parameters": {
+        "path": "api/v1/investigation",
+        "httpMethod": "POST",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "1544e7d0-6fbd-4b69-9251-814c937ddd06",
+      "name": "API_Dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "path": "api/v1/dashboard",
+        "httpMethod": "GET",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "87f0aee2-f0f8-4166-9610-5376a18fd42e",
+      "name": "API_Health",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        450
+      ],
+      "parameters": {
+        "path": "api/v1/health",
+        "httpMethod": "GET",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "52bd0a0e-4009-458e-8759-7ef69fe1498c",
+      "name": "CODE_RBAC_Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        200
+      ],
+      "parameters": {
+        "jsCode": "\n// Mock RBAC validation against postgres table\nconst authHeader = ($node.API_Scan || $node.API_Dashboard || $node.API_Health || $node.API_Investigation || {headers:{}})?.headers?.authorization;\nif (!authHeader) {\n    // In reality, this would throw an error to return 401\n    return { auth: { status: 'unauthorized', role: 'none' } };\n}\nreturn { auth: { status: 'authorized', role: 'Admin' } };\n"
+      }
+    },
+    {
+      "id": "b9f28ce5-30a9-45b8-8981-53ae4e56b8de",
+      "name": "CODE_API_Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "jsCode": "\n// Route to Trigger Layer if it's a scan, else handle response\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "7828c0b4-1c68-49a1-9da9-86e449a63c84",
+      "name": "Sticky Note: 02 Trigger Layer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        900
+      ],
+      "parameters": {
+        "content": "## 02 Trigger Layer",
+        "height": 800,
+        "width": 1000,
+        "color": 7
+      }
+    },
+    {
+      "id": "5b02e1bb-9a8c-41df-aa63-dcd7ce102ace",
+      "name": "Trigger_Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        900
+      ],
+      "parameters": {
+        "path": "scan-trigger",
+        "options": {}
+      }
+    },
+    {
+      "id": "caae2279-1662-4030-8b55-6bb5521b8212",
+      "name": "Trigger_GitHub",
+      "type": "n8n-nodes-base.githubTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1050
+      ],
+      "parameters": {
+        "events": [
+          "push"
+        ]
+      }
+    },
+    {
+      "id": "051ed380-bffe-478f-aa18-212fae0b0997",
+      "name": "Trigger_Schedule",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1200
+      ],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyDay",
+              "hour": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "dfcd731b-a740-461c-a7ce-2a23b5ec2fe0",
+      "name": "Trigger_Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1350
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "f344be40-9b73-4e29-93b8-20231c643ad6",
+      "name": "CODE_TriggerRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "\nconst source = $node.Trigger_Webhook ? 'Webhook' : \n               $node.Trigger_GitHub ? 'GitHub' : \n               $node.Trigger_Schedule ? 'Schedule' : 'Manual';\n               \nreturn {\n    trigger: {\n        source: source,\n        timestamp: new Date().toISOString(),\n        initiated_by: 'system'\n    }\n};\n"
+      }
+    },
+    {
+      "id": "59b834d8-ae35-436d-8c97-c2bceb558a2f",
+      "name": "Sticky Note: 03 Configuration",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1800
+      ],
+      "parameters": {
+        "content": "## 03 Configuration",
+        "height": 400,
+        "width": 1000,
+        "color": 6
+      }
+    },
+    {
+      "id": "f3968e55-e4fa-4257-9216-28b14bc2b095",
       "name": "CRON_Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
       "position": [
         50,
-        100
+        1900
       ],
       "parameters": {
         "rule": {
@@ -38,13 +229,13 @@
       }
     },
     {
-      "id": "f0a289b6-e64e-4744-a55c-aee04b634c35",
+      "id": "635202ae-85aa-4602-95b3-d6f3dc715db9",
       "name": "CFG_Configuration",
       "type": "n8n-nodes-base.set",
       "typeVersion": 1,
       "position": [
         250,
-        100
+        1900
       ],
       "parameters": {
         "values": {
@@ -82,6 +273,34 @@
             {
               "name": "ENABLE_AI",
               "value": true
+            },
+            {
+              "name": "ENABLE_NVD",
+              "value": true
+            },
+            {
+              "name": "ENABLE_EPSS",
+              "value": true
+            },
+            {
+              "name": "ENABLE_KEV",
+              "value": true
+            },
+            {
+              "name": "ENABLE_SHODAN",
+              "value": false
+            },
+            {
+              "name": "ENABLE_VIRUSTOTAL",
+              "value": true
+            },
+            {
+              "name": "ENABLE_GREYNOISE",
+              "value": false
+            },
+            {
+              "name": "ENABLE_ABUSEIPDB",
+              "value": false
             }
           ],
           "number": [
@@ -96,48 +315,176 @@
             {
               "name": "PARALLEL_LIMIT",
               "value": 5
+            },
+            {
+              "name": "TTL_NVD",
+              "value": 604800
+            },
+            {
+              "name": "TTL_EPSS",
+              "value": 86400
+            },
+            {
+              "name": "TTL_KEV",
+              "value": 86400
+            },
+            {
+              "name": "TTL_SHODAN",
+              "value": 43200
+            },
+            {
+              "name": "TTL_VIRUSTOTAL",
+              "value": 43200
+            },
+            {
+              "name": "TTL_GREYNOISE",
+              "value": 21600
+            },
+            {
+              "name": "TTL_ABUSEIPDB",
+              "value": 86400
             }
           ]
         }
       }
     },
     {
-      "id": "4dd89e45-c187-4e03-bfe0-24910c18e99a",
-      "name": "MERGE_1",
+      "id": "b6eefe52-11fe-4b3e-b19a-781157e4a4a3",
+      "name": "MERGE_3",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
-        650,
-        150
+        850,
+        1950
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "e1420da0-0263-485d-9520-777fcdd50611",
-      "name": "Sticky Note: 02 Asset Discovery",
+      "id": "b0bed4a9-d1fd-4b13-ab3e-c1a3b2a8b8ab",
+      "name": "Sticky Note: 04 Asset Inventory",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        500
+        2300
       ],
       "parameters": {
-        "content": "## 02 Asset Discovery",
+        "content": "## 04 Asset Inventory",
+        "height": 800,
+        "width": 1000,
+        "color": 2
+      }
+    },
+    {
+      "id": "dc2b2bc7-c133-4edb-b149-f0470151a7a0",
+      "name": "DB_LoadAssetCMDB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        0,
+        2500
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM assets WHERE domain = '{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}' LIMIT 1"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "cf51d376-2532-42e7-8691-8e1b75999f73",
+      "name": "CODE_AttachAssetContext",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        2500
+      ],
+      "parameters": {
+        "jsCode": "\n// Merge the trigger data, config data, and CMDB data into the global payload\nconst config = $items(\"CFG_Configuration\")[0].json;\nconst cmdb = $json || { domain: config.TARGET_DOMAIN, environment: 'Unknown', criticality: 'Medium' };\n\nreturn {\n    ...config,\n    asset_context: cmdb\n};\n"
+      }
+    },
+    {
+      "id": "49afecda-03ea-4c9f-a190-20a0bc44f33a",
+      "name": "Sticky Note: 05 Plugin Manager",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        3200
+      ],
+      "parameters": {
+        "content": "## 05 Plugin Manager",
+        "height": 800,
+        "width": 1000,
+        "color": 2
+      }
+    },
+    {
+      "id": "5eac9045-0596-4e82-93dc-6c7d225df9f4",
+      "name": "DB_LoadPlugins",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        0,
+        3400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM plugins WHERE enabled = true ORDER BY priority ASC"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "b32fe325-cab0-45a7-ba1d-954d1fd92f0a",
+      "name": "CODE_PluginRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        3400
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst activePlugins = $input.all().map(i => i.json);\nglobalJson.plugins_enabled = activePlugins.map(p => p.name);\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "287dbcde-32c5-46c4-9319-22e0e12417a9",
+      "name": "Sticky Note: 06 Asset Discovery",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        4100
+      ],
+      "parameters": {
+        "content": "## 06 Asset Discovery",
         "height": 400,
-        "width": 800,
+        "width": 1000,
         "color": 1
       }
     },
     {
-      "id": "9d1de8ec-c824-41f0-bf2d-30646eda7c83",
+      "id": "1d5585c3-8b25-4239-b47d-8a964a0284f7",
       "name": "HTTP_Subfinder",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         50,
-        600
+        4200
       ],
       "parameters": {
         "url": "https://api.subfinder.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
@@ -145,13 +492,13 @@
       "continueOnFail": true
     },
     {
-      "id": "c295f887-c988-47e3-8fca-7b8a15c80c86",
+      "id": "2f5b74a8-fc29-4e6d-81d9-07c36f0dce6d",
       "name": "HTTP_WHOIS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         250,
-        600
+        4200
       ],
       "parameters": {
         "url": "https://api.whois.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
@@ -159,42 +506,42 @@
       "continueOnFail": true
     },
     {
-      "id": "9596bb32-aa85-4e2c-ba4a-b8c0df9d2a0e",
-      "name": "MERGE_2",
+      "id": "c7cfda72-fbbf-49cb-a09e-33ad8b2ddad9",
+      "name": "MERGE_6",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
-        650,
-        650
+        850,
+        4250
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "cbc02003-c7e0-4129-adc9-9b910a7e349b",
-      "name": "Sticky Note: 03 DNS",
+      "id": "b0bf17f6-afe0-46a2-bc66-36cbd4312037",
+      "name": "Sticky Note: 07 DNS",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        1000
+        4600
       ],
       "parameters": {
-        "content": "## 03 DNS",
+        "content": "## 07 DNS",
         "height": 400,
-        "width": 800,
+        "width": 1000,
         "color": 1
       }
     },
     {
-      "id": "78a97c3b-5606-4674-8ba9-b4d48660acc4",
+      "id": "0d22e346-8d56-4fe6-88c3-cfcaa4e975e5",
       "name": "HTTP_CloudflareDNS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         50,
-        1100
+        4700
       ],
       "parameters": {
         "url": "https://cloudflare-dns.com/dns-query?name={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}&type=A",
@@ -211,54 +558,54 @@
       "continueOnFail": true
     },
     {
-      "id": "714c94a0-2854-4ca5-9572-268c9f854763",
+      "id": "e7ff39db-48b6-4ecc-afc4-3e7f43764624",
       "name": "HTTP_ReverseDNS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         250,
-        1100
+        4700
       ],
       "parameters": {},
       "continueOnFail": true
     },
     {
-      "id": "0d7e6560-e09b-4c76-9a2a-801bce959e64",
-      "name": "MERGE_3",
+      "id": "448b47b9-d467-47e4-a9a9-b008b5e968b2",
+      "name": "MERGE_7",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
-        650,
-        1150
+        850,
+        4750
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "bda4e5b4-5617-4cc9-872b-4f94ef2942ec",
-      "name": "Sticky Note: 04 Attack Surface",
+      "id": "336e4fc1-f7f8-4e21-9bdd-033ee3f5422f",
+      "name": "Sticky Note: 08 Attack Surface",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        1500
+        5100
       ],
       "parameters": {
-        "content": "## 04 Attack Surface",
+        "content": "## 08 Attack Surface",
         "height": 400,
-        "width": 800,
+        "width": 1000,
         "color": 2
       }
     },
     {
-      "id": "582c1c27-2842-48c0-86e5-0cc72fda8628",
+      "id": "2843b031-f4a8-478b-a037-a2e140054d23",
       "name": "CMD_Nmap",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         50,
-        1600
+        5200
       ],
       "parameters": {
         "command": "nmap -Pn -F {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -oX -"
@@ -266,13 +613,13 @@
       "continueOnFail": true
     },
     {
-      "id": "458ed3c1-6869-488d-ac1e-a6c923b52b62",
+      "id": "c4ed5ad2-d9b0-47d3-ad86-7faa92d69294",
       "name": "HTTP_SSL",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         250,
-        1600
+        5200
       ],
       "parameters": {
         "url": "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}",
@@ -284,13 +631,13 @@
       "continueOnFail": true
     },
     {
-      "id": "323eddf0-6ff4-4a09-822c-9797a7dac4f2",
+      "id": "99dae5d3-b785-4a4d-a0e1-300d22425d4a",
       "name": "HTTP_Headers",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         450,
-        1600
+        5200
       ],
       "parameters": {
         "url": "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
@@ -298,42 +645,42 @@
       "continueOnFail": true
     },
     {
-      "id": "2deb3c08-9b37-422d-82d6-edde651b0362",
-      "name": "MERGE_4",
+      "id": "07497bdc-59db-4bee-b934-3249b4fb4d78",
+      "name": "MERGE_8",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
-        650,
-        1650
+        850,
+        5250
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "1d07ffbc-7cb1-4154-80ec-46c6420d88fe",
-      "name": "Sticky Note: 05 Vulnerability Scanning",
+      "id": "b912e32b-5bd3-4337-8705-21efacc08013",
+      "name": "Sticky Note: 09 Vulnerability Scanning",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        2000
+        5600
       ],
       "parameters": {
-        "content": "## 05 Vulnerability Scanning",
+        "content": "## 09 Vulnerability Scanning",
         "height": 400,
-        "width": 800,
+        "width": 1000,
         "color": 3
       }
     },
     {
-      "id": "d4fcdbd2-6615-4ff3-8217-654a9755ee4f",
+      "id": "f7a5e132-1084-4b0e-a0f2-9320786ad334",
       "name": "CMD_Nuclei",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         50,
-        2100
+        5700
       ],
       "parameters": {
         "command": "nuclei -u https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -json"
@@ -341,255 +688,2846 @@
       "continueOnFail": true
     },
     {
-      "id": "2d2f1a63-3c34-4992-8ad4-592481b338f0",
+      "id": "49a558f6-ba9b-4def-9928-7ee4ed815f1e",
       "name": "CMD_Trivy",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         250,
-        2100
+        5700
       ],
       "parameters": {},
       "continueOnFail": true
     },
     {
-      "id": "c3df125f-26a8-4a67-aec0-30768ebd7311",
+      "id": "1c493e7a-daa8-4cc5-a7e6-c1229e20c5b3",
       "name": "CMD_ZAP_Passive",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         450,
-        2100
+        5700
       ],
       "parameters": {},
       "continueOnFail": true
     },
     {
-      "id": "27de3e45-a79c-4d0b-954c-ccfb79939563",
-      "name": "MERGE_5",
+      "id": "43fc5a58-9d46-4171-b6d3-3799101ba78a",
+      "name": "MERGE_9",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
-        650,
-        2150
+        850,
+        5750
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "38f661b7-52e2-4ff3-8e03-7340986d2baa",
-      "name": "Sticky Note: 06 Threat Intelligence",
+      "id": "7a5dda28-9012-4bcd-8e28-ac3b5460885d",
+      "name": "Sticky Note: 10 Cloud Security",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        2500
+        6100
       ],
       "parameters": {
-        "content": "## 06 Threat Intelligence",
-        "height": 400,
-        "width": 800,
+        "content": "## 10 Cloud Security",
+        "height": 800,
+        "width": 1000,
+        "color": 3
+      }
+    },
+    {
+      "id": "e6c415fe-2c24-4aa8-9f08-476387ad8081",
+      "name": "Cloud_AWS_Prowler",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        6100
+      ],
+      "parameters": {
+        "command": "echo 'Mock AWS Prowler scan' && cat examples/mock_prowler.json || echo '{}'"
+      }
+    },
+    {
+      "id": "ac8e89b4-b108-4c94-9046-78b54727c08b",
+      "name": "Cloud_Azure_API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        0,
+        6250
+      ],
+      "parameters": {
+        "url": "https://management.azure.com/mock",
+        "method": "GET"
+      }
+    },
+    {
+      "id": "24ba0b0d-8177-4836-a990-758bcb916d5a",
+      "name": "Cloud_GCP_API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        0,
+        6400
+      ],
+      "parameters": {
+        "url": "https://mock.googleapis.com",
+        "method": "GET"
+      }
+    },
+    {
+      "id": "cb076665-f421-4f22-b31a-d559c490957d",
+      "name": "CODE_CloudNormalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        6250
+      ],
+      "parameters": {
+        "jsCode": "\n// Mock normalization\nconst globalJson = $items(\"CFG_Configuration\")[0].json;\nglobalJson.cloud_findings = [\n    { provider: 'aws', resource_type: 's3', resource_id: 'bucket-1', risk: 'high' }\n];\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "34f12c05-1094-4f4b-b91c-e5660c8a66bf",
+      "name": "Sticky Note: 11 Container Security",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7000
+      ],
+      "parameters": {
+        "content": "## 11 Container Security",
+        "height": 800,
+        "width": 1000,
         "color": 4
       }
     },
     {
-      "id": "e529ce2b-f497-4115-84dd-aae7c6be80b7",
-      "name": "HTTP_VirusTotal",
-      "type": "n8n-nodes-base.httpRequest",
+      "id": "b8ae67f3-3e6f-4c08-bf33-41319fa5d0f2",
+      "name": "Container_Trivy_FS",
+      "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        50,
-        2600
-      ],
-      "parameters": {},
-      "continueOnFail": true
-    },
-    {
-      "id": "b1ec2c63-f1b7-4fd7-b15f-51724489dd73",
-      "name": "HTTP_Shodan",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        250,
-        2600
-      ],
-      "parameters": {},
-      "continueOnFail": true
-    },
-    {
-      "id": "4551c1d1-d4ba-456b-878a-5ff5e5199cca",
-      "name": "MERGE_6",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
-      "position": [
-        650,
-        2650
+        0,
+        7000
       ],
       "parameters": {
-        "mode": "wait"
+        "command": "echo 'Mock Trivy FS scan'"
       }
     },
     {
-      "id": "2584c758-3932-43ee-8494-e30d9348105c",
-      "name": "Sticky Note: 07 Normalizer",
+      "id": "093a2147-86db-45a3-b616-1b9a118eae3e",
+      "name": "Container_Trivy_Image",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7150
+      ],
+      "parameters": {
+        "command": "echo 'Mock Trivy Image scan'"
+      }
+    },
+    {
+      "id": "3378b297-cd04-4b2c-b142-b55b438ec5e3",
+      "name": "Container_Trivy_SBOM",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7300
+      ],
+      "parameters": {
+        "command": "echo 'Mock Trivy SBOM'"
+      }
+    },
+    {
+      "id": "63f6b9ea-eee2-4a9f-8822-226f08e6f7ba",
+      "name": "CODE_ContainerNormalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        7150
+      ],
+      "parameters": {
+        "jsCode": "\n// Mock normalization\nconst globalJson = $items(\"CODE_CloudNormalizer\")[0].json;\nglobalJson.container_findings = [\n    { image_name: 'nginx:latest', vulnerabilities: 5, secrets: 1 }\n];\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "df721d9c-988c-4131-af60-4532176d95cd",
+      "name": "Sticky Note: 12 IaC Manager",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        3000
+        7900
       ],
       "parameters": {
-        "content": "## 07 Normalizer",
+        "content": "## 12 IaC Manager",
+        "height": 800,
+        "width": 1000,
+        "color": 5
+      }
+    },
+    {
+      "id": "99bb4eb6-17d5-49f2-90cb-e5063c1ce17a",
+      "name": "IaC_Terraform",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7900
+      ],
+      "parameters": {
+        "command": "echo 'Terraform Scan'"
+      }
+    },
+    {
+      "id": "3ea78b9f-8a14-4e70-b725-87068cd6c747",
+      "name": "IaC_Kubernetes",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        8050
+      ],
+      "parameters": {
+        "command": "echo 'K8s Scan'"
+      }
+    },
+    {
+      "id": "854f381d-7178-4b4a-b23f-bd225a800781",
+      "name": "IaC_Helm",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        8200
+      ],
+      "parameters": {
+        "command": "echo 'Helm Scan'"
+      }
+    },
+    {
+      "id": "c2ee2005-99a6-4d5b-b75f-152716d86fd5",
+      "name": "CODE_IaCNormalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        8050
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.iac = {\n    framework: \"Terraform\",\n    resource_type: \"aws_security_group\",\n    resource_name: \"prod-web-sg\",\n    misconfiguration: \"0.0.0.0/0 on port 22\",\n    severity: \"Critical\"\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "06efb4a7-462b-42cc-9ba6-07be83919fb8",
+      "name": "Sticky Note: 13 Normalizer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        8800
+      ],
+      "parameters": {
+        "content": "## 13 Normalizer",
         "height": 400,
-        "width": 800,
+        "width": 1000,
         "color": 6
       }
     },
     {
-      "id": "c41fdbbf-8294-49b3-bf3c-2bdea7d6d15f",
+      "id": "58118041-2c28-4861-9105-4f1b649b4d51",
       "name": "CODE_StandardizeJSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         50,
-        3100
+        8900
       ],
       "parameters": {
-        "jsCode": "return {\n  workflow_metadata: {\n    version: \"1.0.0\",\n    build: \"2026.06.27\",\n    workflow: \"AI Security Guardian\",\n    phase: 1,\n    execution_id: $execution.id\n  },\n  asset: {\n    domain: $('CFG_Configuration').item.json.TARGET_DOMAIN,\n    fingerprint: $('CFG_Configuration').item.json.TARGET_DOMAIN + \"_\" + ($items(\"HTTP_CloudflareDNS\")[0]?.json?.Answer?.[0]?.data || \"noip\")\n  },\n  dns: $items(\"HTTP_CloudflareDNS\")[0]?.json || {},\n  ssl: $items(\"HTTP_SSL\")[0]?.json || {},\n  headers: $items(\"HTTP_Headers\")[0]?.json || {},\n  ports: ($items(\"CMD_Nmap\")[0]?.json || []).map(p => ({ port: p, confidence: 0.98 })),\n  vulnerabilities: ($items(\"CMD_Nuclei\")[0]?.json || []).map(v => ({ ...v, confidence: 0.95 })),\n  intel: {},\n  risk: {},\n  execution: {\n    timestamp: new Date().toISOString(),\n    scanner_versions: {\n      nmap: \"7.97\",\n      nuclei: \"3.4.0\",\n      trivy: \"0.64\",\n      httpx: \"1.7\"\n    },\n    scanners: {\n      nmap: { success: !!$items(\"CMD_Nmap\")[0], duration: 0 },\n      nuclei: { success: !!$items(\"CMD_Nuclei\")[0], duration: 0 }\n    }\n  }\n};\n"
+        "jsCode": "return {\n  workflow_metadata: {\n    schema_version: \"2.0\",\n    workflow_version: \"1.1.0\",\n    build: \"2026.06.27\",\n    workflow: \"AI Security Guardian\",\n    phase: 2,\n    execution_id: $execution.id\n  },\n  asset: {\n    domain: $('CFG_Configuration').item.json.TARGET_DOMAIN,\n    fingerprint: $('CFG_Configuration').item.json.TARGET_DOMAIN + \"_\" + ($items(\"HTTP_CloudflareDNS\")[0]?.json?.Answer?.[0]?.data || \"noip\")\n  },\n  evidence: {\n    nmap: $items(\"CMD_Nmap\")[0]?.json || {},\n    nuclei: $items(\"CMD_Nuclei\")[0]?.json || {},\n    ssl: $items(\"HTTP_SSL\")[0]?.json || {},\n    headers: $items(\"HTTP_Headers\")[0]?.json || {},\n    dns: $items(\"HTTP_CloudflareDNS\")[0]?.json || {}\n  },\n  dns: $items(\"HTTP_CloudflareDNS\")[0]?.json || {},\n  ssl: $items(\"HTTP_SSL\")[0]?.json || {},\n  headers: $items(\"HTTP_Headers\")[0]?.json || {},\n  ports: ($items(\"CMD_Nmap\")[0]?.json || []).map(p => ({ port: p, confidence: 0.98 })),\n  vulnerabilities: ($items(\"CMD_Nuclei\")[0]?.json || []).map(v => ({ ...v, confidence: 0.95 })),\n  threat_intelligence: {},\n  historical: {},\n  risk: {},\n  trend: {},\n  ai: {},\n  reports: {},\n  execution: {\n    timestamp: new Date().toISOString(),\n    scanner_versions: {\n      nmap: \"7.97\",\n      nuclei: \"3.4.0\",\n      trivy: \"0.64\",\n      httpx: \"1.7\"\n    },\n    scanners: {\n      nmap: { success: !!$items(\"CMD_Nmap\")[0], duration: 0 },\n      nuclei: { success: !!$items(\"CMD_Nuclei\")[0], duration: 0 }\n    }\n  }\n};\n"
       }
     },
     {
-      "id": "1f53919e-8cdd-4f37-963d-94d0131018ae",
-      "name": "Sticky Note: 08 Risk Engine",
+      "id": "b31aae21-95fb-48f4-80e4-a122315c8e8b",
+      "name": "Sticky Note: 14 Historical Comparison",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        3500
+        9300
       ],
       "parameters": {
-        "content": "## 08 Risk Engine",
-        "height": 400,
-        "width": 800,
-        "color": 7
-      }
-    },
-    {
-      "id": "0ab98c51-3926-4410-943b-18824680f20f",
-      "name": "CODE_CalculateRisk",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        50,
-        3600
-      ],
-      "parameters": {
-        "jsCode": "let score = 0;\n// Deterministic Logic: CVSS + EPSS + KEV + Ports + SSL + Headers + Exposure\nconst vulns = $json.vulnerabilities || [];\nif (vulns.length > 0) score += 40; // Example CVSS weight\nconst ports = $json.ports || [];\nif (ports.includes('3389') || ports.includes('22')) score += 15; // Risky open ports\nif ($json.ssl && $json.ssl.expired) score += 10;\nif (!$json.headers?.HSTS) score += 5;\n\n// Clamp score 0-100\n$json.risk.score = Math.min(Math.max(score, 0), 100);\nreturn $json;\n"
-      }
-    },
-    {
-      "id": "635abff7-8b28-4d62-8cf2-adce33ac01bb",
-      "name": "Sticky Note: 09 AI Analyst",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        0,
-        4000
-      ],
-      "parameters": {
-        "content": "## 09 AI Analyst",
-        "height": 400,
-        "width": 800,
-        "color": 7
-      }
-    },
-    {
-      "id": "957ab8f1-1d67-469c-80c0-45d2a2868fc0",
-      "name": "AI_ExecutiveSummary",
-      "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1,
-      "position": [
-        50,
-        4100
-      ],
-      "parameters": {
-        "resource": "chat",
-        "operation": "create",
-        "model": "gpt-4o",
-        "prompt": "=System:\nYou are a Senior Security Analyst.\nInput:\n- Asset information\n- DNS\n- SSL\n- Headers\n- Nmap\n- Nuclei\n- Threat intelligence\n- Risk score\n\nReturn JSON:\n{\n  \"summary\":\"...\",\n  \"priority\":\"...\",\n  \"business_impact\":\"...\",\n  \"technical_analysis\":\"...\",\n  \"recommendations\":[]\n}\n\nUser: {{ JSON.stringify($json) }}"
-      },
-      "continueOnFail": true,
-      "credentials": {
-        "openAiApi": {
-          "id": "",
-          "name": "OpenAI account"
-        }
-      }
-    },
-    {
-      "id": "338d193a-f1a1-4f44-a3ed-214f39fe9486",
-      "name": "CODE_AICostTracker",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        250,
-        4100
-      ],
-      "parameters": {
-        "jsCode": "// Mock token calculation or parse from OpenAI node if available\nconst tokens = JSON.stringify($json).length / 4;\n$json.ai_cost = {\n  model: \"gpt-4o\",\n  tokens: tokens,\n  estimated_cost: (tokens / 1000) * 0.01\n};\nreturn $json;\n"
-      }
-    },
-    {
-      "id": "24a008ca-3b54-44f0-baac-bc9670a79d14",
-      "name": "MERGE_9",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
-      "position": [
-        650,
-        4150
-      ],
-      "parameters": {
-        "mode": "wait"
-      }
-    },
-    {
-      "id": "e725b930-47ed-433d-ab9e-4349ef0491c2",
-      "name": "Sticky Note: 10 PostgreSQL & Notifications",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        0,
-        4500
-      ],
-      "parameters": {
-        "content": "## 10 PostgreSQL & Notifications",
+        "content": "## 14 Historical Comparison",
         "height": 400,
         "width": 1000,
         "color": 5
       }
     },
     {
-      "id": "ca1ac292-3098-4fcc-9f6c-bbe0a8f2f30f",
+      "id": "9e6a39e6-5a2d-43de-89de-efd40a0313e3",
+      "name": "DB_GetPreviousScan",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        50,
+        9400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT score as previous_risk_score FROM risk_scores WHERE asset_id = '{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}' ORDER BY calculated_at DESC LIMIT 1;"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "03fd74f9-9f43-4e35-83c0-6a5418fe8c9c",
+      "name": "CODE_CalculateDelta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        250,
+        9400
+      ],
+      "parameters": {
+        "jsCode": "const previousScore = $items(\"DB_GetPreviousScan\")[0]?.json?.previous_risk_score || null;\n\n$json = $items(\"CODE_StandardizeJSON\")[0].json;\n$json.historical = {\n  previous_risk: previousScore,\n  is_first_scan: previousScore === null,\n  new_ports: [], \n  closed_ports: [],\n  new_cves: [],\n  resolved_cves: []\n};\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "77902cca-7279-4c8b-9bf0-a73e921ddeb5",
+      "name": "MERGE_14",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        850,
+        9450
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "4439824e-2990-4b09-b838-1b9e8fea66b9",
+      "name": "Sticky Note: 15 Change Detection Engine",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        9800
+      ],
+      "parameters": {
+        "content": "## 15 Change Detection Engine",
+        "height": 800,
+        "width": 1000,
+        "color": 1
+      }
+    },
+    {
+      "id": "df5199a9-0aba-4156-a433-05fce8ad4c1e",
+      "name": "CODE_ChangeClassifier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        10000
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst deltas = globalJson.historical;\nconst changes = [];\n\nif (deltas && deltas.new_ports && deltas.new_ports.length > 0) {\n    changes.push({ type: 'NEW_EXPOSURE', severity: 'HIGH', confidence: 0.98 });\n}\nif (deltas && deltas.new_cves && deltas.new_cves.length > 0) {\n    changes.push({ type: 'SECURITY_REGRESSION', severity: 'CRITICAL', confidence: 0.95 });\n}\nif (deltas && deltas.resolved_cves && deltas.resolved_cves.length > 0) {\n    changes.push({ type: 'REMEDIATION_CONFIRMED', severity: 'LOW', confidence: 0.99 });\n}\n\nglobalJson.changes = changes;\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "018e5092-c485-459e-9118-9ea5071a3ef8",
+      "name": "CODE_ChangePriority",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        10000
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst assetContext = globalJson.asset_context || { criticality: 'Medium' };\n\nglobalJson.changes.forEach(change => {\n    change.business_impact = assetContext.criticality;\n});\n\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "d58fee14-77e1-452f-9757-beec48e565aa",
+      "name": "Sticky Note: 16 Threat Intelligence Cache",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        10700
+      ],
+      "parameters": {
+        "content": "## 16 Threat Intelligence Cache",
+        "height": 800,
+        "width": 14600,
+        "color": 4
+      }
+    },
+    {
+      "id": "9e0407f1-2700-4ec3-9e4d-b44dc36c4ef4",
+      "name": "CODE_ExtractFindings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        10700
+      ],
+      "parameters": {
+        "jsCode": "return $json.vulnerabilities || [];"
+      }
+    },
+    {
+      "id": "8ba287ac-45f3-4661-9b82-aab30ff8768d",
+      "name": "IF_NVD",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        300,
+        10100
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $('CFG_Configuration').item.json.ENABLE_NVD }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9ce18957-0555-4ead-9706-9a0d5ed040b3",
+      "name": "DB_CacheLookup_NVD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        600,
+        10050
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider = 'NVD'"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "bf554e18-0420-48fa-902a-710c9ffd1bab",
+      "name": "IF_CacheValid_NVD",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        10050
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.expires_at > new Date().toISOString() }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1fe658ad-6251-42e8-ad3e-9b92bc3d9d05",
+      "name": "HTTP_NVD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        10100
+      ],
+      "parameters": {
+        "url": "https://api.example.com/nvd",
+        "method": "GET"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "5c7a158f-0666-4137-b1f7-7f53282142d9",
+      "name": "IF_ApiSuccess_NVD",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        10100
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.status === 'success' }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2318bf08-c84a-45f7-b8c5-73bf771be5c2",
+      "name": "DB_SaveCache_NVD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        10050
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "threat_intel_cache",
+        "columns": "cache_key, provider, entity_type, response, expires_at",
+        "dataMode": "autoMapInputData"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "54a2e613-71f2-45c7-97c2-d9f99ba250bf",
+      "name": "IF_HasStaleCache_NVD",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        10150
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $items('DB_CacheLookup_NVD')[0].json.response ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9a483b41-a108-4233-95c0-51b29f31c921",
+      "name": "RETURN_CACHE_NVD",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        9950
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'NVD', source: 'cache', data: $json };"
+      }
+    },
+    {
+      "id": "87c35585-c481-4bee-ba0a-2dfa8c8ef3e9",
+      "name": "RETURN_STALE_NVD",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        10100
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'NVD', source: 'stale_cache', data: $items('DB_CacheLookup_NVD')[0].json };"
+      }
+    },
+    {
+      "id": "7b88353d-45fb-40ba-8412-bec75b7ba8bc",
+      "name": "SKIP_NVD",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        10200
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'NVD', skipped: true };"
+      }
+    },
+    {
+      "id": "be10440d-f1ee-406a-b91d-eaaa80a09135",
+      "name": "IF_EPSS",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        300,
+        10450
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $('CFG_Configuration').item.json.ENABLE_EPSS }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "0742e1c1-aa2f-49b6-87af-d8afdc7c4576",
+      "name": "DB_CacheLookup_EPSS",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        600,
+        10400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider = 'EPSS'"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "330f32fa-8ef9-42f2-acdc-9fd4b94379b3",
+      "name": "IF_CacheValid_EPSS",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        10400
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.expires_at > new Date().toISOString() }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9d4f8680-7042-4847-9d92-1a22aa7b1317",
+      "name": "HTTP_EPSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        10450
+      ],
+      "parameters": {
+        "url": "https://api.example.com/epss",
+        "method": "GET"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "7bb9628b-e1b9-478b-850f-835489a1f27c",
+      "name": "IF_ApiSuccess_EPSS",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        10450
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.status === 'success' }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "38b6eeb4-80a1-4997-a555-75db4e35d9d6",
+      "name": "DB_SaveCache_EPSS",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        10400
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "threat_intel_cache",
+        "columns": "cache_key, provider, entity_type, response, expires_at",
+        "dataMode": "autoMapInputData"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "dfa84bda-674a-42db-b84d-ff65a048f27e",
+      "name": "IF_HasStaleCache_EPSS",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        10500
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $items('DB_CacheLookup_EPSS')[0].json.response ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "725bc2b5-5b0d-4f6b-a081-1b24510cc1e1",
+      "name": "RETURN_CACHE_EPSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        10300
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'EPSS', source: 'cache', data: $json };"
+      }
+    },
+    {
+      "id": "1c8ce8b4-eaca-4bb0-a2fc-379ba139ae47",
+      "name": "RETURN_STALE_EPSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        10450
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'EPSS', source: 'stale_cache', data: $items('DB_CacheLookup_EPSS')[0].json };"
+      }
+    },
+    {
+      "id": "b30f73cd-8905-4f93-afed-dbc916750b48",
+      "name": "SKIP_EPSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        10550
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'EPSS', skipped: true };"
+      }
+    },
+    {
+      "id": "4f982894-a90b-4f9d-aa58-92e9286f4fe2",
+      "name": "IF_KEV",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        300,
+        10800
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $('CFG_Configuration').item.json.ENABLE_KEV }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b0c8ef11-4526-4cbc-9fdb-b195287e2328",
+      "name": "DB_CacheLookup_KEV",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        600,
+        10750
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider = 'KEV'"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "32f91964-82c9-42cb-bc23-2825c95cfb0e",
+      "name": "IF_CacheValid_KEV",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        10750
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.expires_at > new Date().toISOString() }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "99136076-1965-4b8e-9d5a-598adf9cbee5",
+      "name": "HTTP_KEV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        10800
+      ],
+      "parameters": {
+        "url": "https://api.example.com/kev",
+        "method": "GET"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "06f45e8e-ebe4-4158-92e5-105497ab033b",
+      "name": "IF_ApiSuccess_KEV",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        10800
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.status === 'success' }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "181f9a82-6653-4aa9-8c8a-ab5ac435e4d0",
+      "name": "DB_SaveCache_KEV",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        10750
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "threat_intel_cache",
+        "columns": "cache_key, provider, entity_type, response, expires_at",
+        "dataMode": "autoMapInputData"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "af660183-4f2c-4edb-b512-d4f42437633b",
+      "name": "IF_HasStaleCache_KEV",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        10850
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $items('DB_CacheLookup_KEV')[0].json.response ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c08b427b-922e-4e6a-8fd6-a272b339de05",
+      "name": "RETURN_CACHE_KEV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        10650
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'KEV', source: 'cache', data: $json };"
+      }
+    },
+    {
+      "id": "83c25591-090d-435a-a50f-dada4acfbe18",
+      "name": "RETURN_STALE_KEV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        10800
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'KEV', source: 'stale_cache', data: $items('DB_CacheLookup_KEV')[0].json };"
+      }
+    },
+    {
+      "id": "dfa47e66-ab07-41b4-bf91-7e69ee928234",
+      "name": "SKIP_KEV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        10900
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'KEV', skipped: true };"
+      }
+    },
+    {
+      "id": "1a85cfbb-bc83-49b2-b080-62ad9a14fe9b",
+      "name": "IF_Shodan",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        300,
+        11150
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $('CFG_Configuration').item.json.ENABLE_SHODAN }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f8272ed6-b1c6-4597-a68e-724b4b9337b5",
+      "name": "DB_CacheLookup_Shodan",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        600,
+        11100
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider = 'Shodan'"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "71366afd-7de3-4be8-8329-0347e01baf5c",
+      "name": "IF_CacheValid_Shodan",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        11100
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.expires_at > new Date().toISOString() }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "61326aae-2eec-4af0-b075-675c7654cc19",
+      "name": "HTTP_Shodan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        11150
+      ],
+      "parameters": {
+        "url": "https://api.example.com/shodan",
+        "method": "GET"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "ae35afd1-0a0e-4b60-aaf0-c80df372c679",
+      "name": "IF_ApiSuccess_Shodan",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        11150
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.status === 'success' }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "67deeea7-ff53-4069-ba3f-2873caa192bd",
+      "name": "DB_SaveCache_Shodan",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        11100
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "threat_intel_cache",
+        "columns": "cache_key, provider, entity_type, response, expires_at",
+        "dataMode": "autoMapInputData"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "a01e77d4-dae1-4025-990f-20b6f0119d1a",
+      "name": "IF_HasStaleCache_Shodan",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        11200
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $items('DB_CacheLookup_Shodan')[0].json.response ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bcb00983-415e-4d52-a91c-e042cb967e59",
+      "name": "RETURN_CACHE_Shodan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        11000
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'Shodan', source: 'cache', data: $json };"
+      }
+    },
+    {
+      "id": "1725a5ff-2712-4720-b40e-a62e1c77781a",
+      "name": "RETURN_STALE_Shodan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        11150
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'Shodan', source: 'stale_cache', data: $items('DB_CacheLookup_Shodan')[0].json };"
+      }
+    },
+    {
+      "id": "d225dd18-2cd6-485e-aabd-0ddc7e40e9e4",
+      "name": "SKIP_Shodan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        11250
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'Shodan', skipped: true };"
+      }
+    },
+    {
+      "id": "704702f0-ade4-4ce1-b73f-78b949668ea6",
+      "name": "IF_VirusTotal",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        300,
+        11500
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $('CFG_Configuration').item.json.ENABLE_VIRUSTOTAL }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3426648b-69a9-446d-8646-2e3028751c14",
+      "name": "DB_CacheLookup_VirusTotal",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        600,
+        11450
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider = 'VirusTotal'"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "9a28aa60-b562-4a22-b807-6b86e4c68fb7",
+      "name": "IF_CacheValid_VirusTotal",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        11450
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.expires_at > new Date().toISOString() }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a42b7a1d-26a7-4e14-9ee2-8af7ed3523d4",
+      "name": "HTTP_VirusTotal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        11500
+      ],
+      "parameters": {
+        "url": "https://api.example.com/virustotal",
+        "method": "GET"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "703f9e73-4c43-4053-8b63-92b19d802da2",
+      "name": "IF_ApiSuccess_VirusTotal",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        11500
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.status === 'success' }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "446cbf6c-b9c5-45da-9e4a-be8f46d634bb",
+      "name": "DB_SaveCache_VirusTotal",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        11450
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "threat_intel_cache",
+        "columns": "cache_key, provider, entity_type, response, expires_at",
+        "dataMode": "autoMapInputData"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "274609d0-ebe3-4273-bec0-06b71fd75444",
+      "name": "IF_HasStaleCache_VirusTotal",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        11550
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $items('DB_CacheLookup_VirusTotal')[0].json.response ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4f657683-d5ce-4c33-a3ea-bd4d34c58228",
+      "name": "RETURN_CACHE_VirusTotal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        11350
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'VirusTotal', source: 'cache', data: $json };"
+      }
+    },
+    {
+      "id": "d5460d90-f2e6-4191-9571-1443e53f64c2",
+      "name": "RETURN_STALE_VirusTotal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        11500
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'VirusTotal', source: 'stale_cache', data: $items('DB_CacheLookup_VirusTotal')[0].json };"
+      }
+    },
+    {
+      "id": "773b511d-ba40-4b42-b7e0-87c95c3fa2bc",
+      "name": "SKIP_VirusTotal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        11600
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'VirusTotal', skipped: true };"
+      }
+    },
+    {
+      "id": "11729ee4-89a7-4249-9d72-ac50e7efb5dc",
+      "name": "IF_GreyNoise",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        300,
+        11850
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $('CFG_Configuration').item.json.ENABLE_GREYNOISE }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "df3b5d54-cec0-4df1-95fa-46f43b533863",
+      "name": "DB_CacheLookup_GreyNoise",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        600,
+        11800
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider = 'GreyNoise'"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "f55ed93e-a21a-46d9-a9fa-aa3cc5e687bb",
+      "name": "IF_CacheValid_GreyNoise",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        11800
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.expires_at > new Date().toISOString() }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7a3b5039-578c-4dc4-b1ad-6e2f63c14398",
+      "name": "HTTP_GreyNoise",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        11850
+      ],
+      "parameters": {
+        "url": "https://api.example.com/greynoise",
+        "method": "GET"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "ce01be3b-d545-4b89-ac5f-129e902b033d",
+      "name": "IF_ApiSuccess_GreyNoise",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        11850
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.status === 'success' }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "e89be242-b3f8-4cc2-b874-c879cc3876b6",
+      "name": "DB_SaveCache_GreyNoise",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        11800
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "threat_intel_cache",
+        "columns": "cache_key, provider, entity_type, response, expires_at",
+        "dataMode": "autoMapInputData"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "5c033cc3-9007-4ad9-9254-a9146988097f",
+      "name": "IF_HasStaleCache_GreyNoise",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        11900
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $items('DB_CacheLookup_GreyNoise')[0].json.response ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "8cca4065-10ca-469c-838e-cc3759b96608",
+      "name": "RETURN_CACHE_GreyNoise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        11700
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'GreyNoise', source: 'cache', data: $json };"
+      }
+    },
+    {
+      "id": "d9815c78-f7b9-49fe-ace8-c95c15f82726",
+      "name": "RETURN_STALE_GreyNoise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        11850
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'GreyNoise', source: 'stale_cache', data: $items('DB_CacheLookup_GreyNoise')[0].json };"
+      }
+    },
+    {
+      "id": "9ea9e67c-1c3d-4a97-b9fb-499e73841991",
+      "name": "SKIP_GreyNoise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        11950
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'GreyNoise', skipped: true };"
+      }
+    },
+    {
+      "id": "1ecaf8f0-b550-4674-aaf2-f87eef7ea2cb",
+      "name": "IF_AbuseIPDB",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        300,
+        12200
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $('CFG_Configuration').item.json.ENABLE_ABUSEIPDB }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a254d312-c5fc-4b53-b85f-3c294070a97d",
+      "name": "DB_CacheLookup_AbuseIPDB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        600,
+        12150
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM threat_intel_cache WHERE cache_key = $1 AND provider = 'AbuseIPDB'"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "d45e4e94-249d-4ba4-bda7-f898a18c6238",
+      "name": "IF_CacheValid_AbuseIPDB",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        12150
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.expires_at > new Date().toISOString() }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6604f735-335e-4921-8cee-db2a4d1692b4",
+      "name": "HTTP_AbuseIPDB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        12200
+      ],
+      "parameters": {
+        "url": "https://api.example.com/abuseipdb",
+        "method": "GET"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "842880d0-59cf-4906-81ec-4a2c31c83b76",
+      "name": "IF_ApiSuccess_AbuseIPDB",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        12200
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.status === 'success' }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "33377532-57a4-4cad-9f71-eb5dd225788c",
+      "name": "DB_SaveCache_AbuseIPDB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        12150
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "threat_intel_cache",
+        "columns": "cache_key, provider, entity_type, response, expires_at",
+        "dataMode": "autoMapInputData"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "b8ecaafa-32ca-4956-abc4-cb17876a9e17",
+      "name": "IF_HasStaleCache_AbuseIPDB",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        12250
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $items('DB_CacheLookup_AbuseIPDB')[0].json.response ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1fe9c2f6-485c-4255-817b-3dacc0382767",
+      "name": "RETURN_CACHE_AbuseIPDB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        12050
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'AbuseIPDB', source: 'cache', data: $json };"
+      }
+    },
+    {
+      "id": "6786dca6-5746-46e2-a9d3-b5faabc9db4c",
+      "name": "RETURN_STALE_AbuseIPDB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        12200
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'AbuseIPDB', source: 'stale_cache', data: $items('DB_CacheLookup_AbuseIPDB')[0].json };"
+      }
+    },
+    {
+      "id": "5f991a85-d20d-4e06-8d84-19dc05a9fc71",
+      "name": "SKIP_AbuseIPDB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        12300
+      ],
+      "parameters": {
+        "jsCode": "return { provider: 'AbuseIPDB', skipped: true };"
+      }
+    },
+    {
+      "id": "ef0894ca-d884-4fd1-918e-8de13422d110",
+      "name": "MERGE_ThreatIntel",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        2500,
+        11150
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "6c10802c-dcc0-480c-9669-6ef6b9bafdf0",
+      "name": "CODE_ThreatIntelAggregator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2800,
+        11150
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $items(\"CODE_CalculateDelta\")[0].json;\nglobalJson.threat_intelligence = {\n    sources: {}, summary: {}, confidence: 0,\n    cache: { hits: 0, misses: 0, refreshes: 0, stale: 0 },\n    metrics: { success_count: 0, skip_count: 0, fail_count: 0 }\n};\n\nlet activeSources = 0;\nfor (const item of $input.all()) {\n    const data = item.json;\n    if (data.skipped) {\n        globalJson.threat_intelligence.metrics.skip_count++;\n    } else {\n        globalJson.threat_intelligence.metrics.success_count++;\n        activeSources++;\n        \n        // Track Cache Metrics\n        if (data.source === 'cache') {\n            globalJson.threat_intelligence.cache.hits++;\n        } else if (data.source === 'stale_cache') {\n            globalJson.threat_intelligence.cache.stale++;\n        } else {\n            globalJson.threat_intelligence.cache.refreshes++;\n        }\n\n        globalJson.threat_intelligence.sources[data.provider || 'unknown'] = {\n            source_type: data.source || 'live_api',\n            retrieved_at: new Date().toISOString(),\n            confidence: 0.95\n        };\n    }\n}\n\nglobalJson.threat_intelligence.confidence = activeSources > 0 ? (activeSources / 7) : 0;\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "9db564d2-9b7a-4ea3-b922-2c4464d8bc86",
+      "name": "Sticky Note: 17 Trend Intelligence Engine",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        11600
+      ],
+      "parameters": {
+        "content": "## 17 Trend Intelligence Engine",
+        "height": 800,
+        "width": 1600,
+        "color": 3
+      }
+    },
+    {
+      "id": "3ca09121-a542-44a1-b8f7-f2430eebbeab",
+      "name": "DB_LoadHistoricalTrends",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        0,
+        11900
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM trend_analysis WHERE asset_id = '{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}' AND date >= CURRENT_DATE - 90 ORDER BY date ASC"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "4f091062-b634-4c27-b7ae-1f85460dbc17",
+      "name": "CODE_EngineRiskTrend",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        11600
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for RiskTrend\\nreturn { engine: 'RiskTrend', data: { trend: 'stable', value: Math.random() } };"
+      }
+    },
+    {
+      "id": "ba5a32d9-862c-4959-9489-98882b836ab3",
+      "name": "CODE_EngineFindingVelocity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        11750
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for FindingVelocity\\nreturn { engine: 'FindingVelocity', data: { trend: 'stable', value: Math.random() } };"
+      }
+    },
+    {
+      "id": "8289f1d6-d0b7-4165-8e15-52925ae816fc",
+      "name": "CODE_EngineAssetGrowth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        11900
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for AssetGrowth\\nreturn { engine: 'AssetGrowth', data: { trend: 'stable', value: Math.random() } };"
+      }
+    },
+    {
+      "id": "90f78109-6173-46f8-9b18-0624eda9f1d0",
+      "name": "CODE_EngineScannerHealth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        12050
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for ScannerHealth\\nreturn { engine: 'ScannerHealth', data: { trend: 'stable', value: Math.random() } };"
+      }
+    },
+    {
+      "id": "831c68a5-c9af-4415-925d-6916e566e759",
+      "name": "CODE_EngineThreatEvolution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        12200
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for ThreatEvolution\\nreturn { engine: 'ThreatEvolution', data: { trend: 'stable', value: Math.random() } };"
+      }
+    },
+    {
+      "id": "fdbf67b0-e72f-40e8-8aa5-f69e827decbc",
+      "name": "MERGE_TrendEngines",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        700,
+        11900
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "d7762b44-de19-4fe6-b2af-0b2b2778c166",
+      "name": "CODE_TrendConfidence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        11900
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $items(\"CODE_ThreatIntelAggregator\")[0].json;\n\nglobalJson.trend = {\n    risk: {},\n    findings: {},\n    assets: {},\n    scanner_health: {},\n    threat_evolution: {},\n    confidence: 0.95\n};\n\nfor (const item of $input.all()) {\n    if (item.json.engine === 'RiskTrend') globalJson.trend.risk = item.json.data;\n    if (item.json.engine === 'FindingVelocity') globalJson.trend.findings = item.json.data;\n    if (item.json.engine === 'AssetGrowth') globalJson.trend.assets = item.json.data;\n    if (item.json.engine === 'ScannerHealth') globalJson.trend.scanner_health = item.json.data;\n    if (item.json.engine === 'ThreatEvolution') globalJson.trend.threat_evolution = item.json.data;\n}\n\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "6be26c45-9770-471c-9a05-69284182b083",
+      "name": "Sticky Note: 18 Security Intelligence Layer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        12500
+      ],
+      "parameters": {
+        "content": "## 18 Security Intelligence Layer",
+        "height": 800,
+        "width": 1600,
+        "color": 5
+      }
+    },
+    {
+      "id": "9fad4511-b46c-443f-a34e-1bf3c47cc8df",
+      "name": "CODE_ExtractRawMetrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        12700
+      ],
+      "parameters": {
+        "jsCode": "return $json;"
+      }
+    },
+    {
+      "id": "caf26836-fa5c-4b66-9704-d0b96f2eb522",
+      "name": "CODE_OperationalMetrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        12500
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for Operational Metrics\\nreturn { category: 'operational', metrics: { score: Math.random() } };"
+      }
+    },
+    {
+      "id": "e675bff2-7dec-418b-8152-4fa057581a04",
+      "name": "CODE_SecurityMetrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        12650
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for Security Metrics\\nreturn { category: 'security', metrics: { score: Math.random() } };"
+      }
+    },
+    {
+      "id": "0553ed1f-886b-42d0-88bf-fed5e64df1dc",
+      "name": "CODE_ExecutiveMetrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        12800
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for Executive Metrics\\nreturn { category: 'executive', metrics: { score: Math.random() } };"
+      }
+    },
+    {
+      "id": "0572807f-733d-4346-820b-00ce82f9aea8",
+      "name": "CODE_BusinessMetrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        12950
+      ],
+      "parameters": {
+        "jsCode": "// Mock logic for Business Metrics\\nreturn { category: 'business', metrics: { score: Math.random() } };"
+      }
+    },
+    {
+      "id": "d59f3bde-b41e-4f08-aee1-c0a5dd76a3dd",
+      "name": "MERGE_SecurityIntel",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        700,
+        12700
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "ae912738-2776-4bc3-800a-126578b3dcc4",
+      "name": "CODE_SecurityIntelligenceAggregator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        12700
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $items(\"CODE_TrendConfidence\")[0].json;\n\nglobalJson.security_intelligence = {\n    operational: {},\n    security: {},\n    executive: {},\n    business: {},\n    generated_at: new Date().toISOString()\n};\n\nfor (const item of $input.all()) {\n    if (item.json.category === 'operational') globalJson.security_intelligence.operational = item.json.metrics;\n    if (item.json.category === 'security') globalJson.security_intelligence.security = item.json.metrics;\n    if (item.json.category === 'executive') globalJson.security_intelligence.executive = item.json.metrics;\n    if (item.json.category === 'business') globalJson.security_intelligence.business = item.json.metrics;\n}\n\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "dd477b74-e224-4f2a-b175-97c1acb43e54",
+      "name": "DB_SaveSecurityIntelligence",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        12700
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "dashboard_metrics",
+        "columns": "asset_id, operational_metrics, security_metrics, executive_metrics, business_metrics",
+        "dataMode": "defineBelow",
+        "values": {
+          "value": [
+            {
+              "column": "asset_id",
+              "value": "={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
+            },
+            {
+              "column": "operational_metrics",
+              "value": "={{ JSON.stringify($json.security_intelligence.operational) }}"
+            },
+            {
+              "column": "security_metrics",
+              "value": "={{ JSON.stringify($json.security_intelligence.security) }}"
+            },
+            {
+              "column": "executive_metrics",
+              "value": "={{ JSON.stringify($json.security_intelligence.executive) }}"
+            },
+            {
+              "column": "business_metrics",
+              "value": "={{ JSON.stringify($json.security_intelligence.business) }}"
+            }
+          ]
+        }
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "d48e417f-2a59-477e-a3d4-169df504e50d",
+      "name": "Sticky Note: 19 Risk Engine",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        13400
+      ],
+      "parameters": {
+        "content": "## 19 Risk Engine",
+        "height": 400,
+        "width": 1000,
+        "color": 7
+      }
+    },
+    {
+      "id": "c0b3a64c-d76f-4f37-9823-8ad8dc544736",
+      "name": "CODE_CalculateRisk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        50,
+        13500
+      ],
+      "parameters": {
+        "jsCode": "let score = 0;\n// Deterministic Logic: CVSS + EPSS + KEV + Ports + SSL + Headers + Exposure\nconst vulns = $json.vulnerabilities || [];\nif (vulns.length > 0) score += 40; // Example CVSS weight\nconst ports = $json.ports || [];\nif (ports.includes('3389') || ports.includes('22')) score += 15; // Risky open ports\nif ($json.ssl && $json.ssl.expired) score += 10;\nif (!$json.headers?.HSTS) score += 5;\n\n// Apply historical penalty if new critical port\nif ($json.historical?.new_ports?.includes('3389')) score += 20;\n\n// Clamp score 0-100\n$json.risk.score = Math.min(Math.max(score, 0), 100);\n\n// Calculate delta now that we have current score\nif ($json.historical.previous_risk !== null) {\n  $json.historical.risk_delta = $json.risk.score - $json.historical.previous_risk;\n} else {\n  $json.historical.risk_delta = 0;\n}\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "c39da2e8-699b-46c4-afd0-e13d8040cb66",
+      "name": "Sticky Note: 20 Ticketing & Incident Management",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        13900
+      ],
+      "parameters": {
+        "content": "## 20 Ticketing & Incident Management",
+        "height": 800,
+        "width": 1600,
+        "color": 8
+      }
+    },
+    {
+      "id": "6cecef2b-0702-4dd1-83a1-1bcec3bac130",
+      "name": "CODE_IncidentCorrelator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        14100
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst findings = globalJson.vulnerabilities || [];\nglobalJson.incident = {\n    title: `Incident: Multiple Findings on ${globalJson.TARGET_DOMAIN}`,\n    finding_count: findings.length,\n    related_findings: findings.map(f => f.hash || f.name)\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "4ce401ab-2897-45df-b76d-9b8f830dead9",
+      "name": "CODE_PriorityMatrix",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        14100
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst riskScore = globalJson.risk_score || 0;\nconst criticality = (globalJson.asset_context || {}).criticality || 'Medium';\n\nlet priority = 'P4';\nif (riskScore > 90 && criticality === 'Critical') priority = 'P1';\nelse if (riskScore > 80) priority = 'P2';\nelse if (riskScore > 60) priority = 'P3';\n\nglobalJson.incident.priority = priority;\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "12033aa7-13d7-4676-b6f3-0256ef16c130",
+      "name": "CODE_TicketDeduplication",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        14100
+      ],
+      "parameters": {
+        "jsCode": "// Mock deduplication logic\\n$json.incident.is_duplicate = false;\\nreturn $json;"
+      }
+    },
+    {
+      "id": "28dc3aa6-3a87-4d4a-8c35-6e586a8c2276",
+      "name": "IF_IsDuplicate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        14100
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.incident.is_duplicate }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "8503d41a-1177-4535-b1e8-b50782d7db27",
+      "name": "TicketRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        14200
+      ],
+      "parameters": {
+        "jsCode": "return $json;"
+      }
+    },
+    {
+      "id": "666f7180-27d6-4012-95f1-60a6e71e583e",
+      "name": "HTTP_GitHubCreateIssue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        14200
+      ],
+      "parameters": {
+        "url": "https://api.github.com/repos/mock/mock/issues",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "a78306f1-98ad-4581-b491-a8d2a434ac4c",
+      "name": "HTTP_GitHubUpdateIssue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        14000
+      ],
+      "parameters": {
+        "url": "https://api.github.com/repos/mock/mock/issues/1",
+        "method": "PATCH"
+      }
+    },
+    {
+      "id": "ed8c46ff-6206-4947-96ab-08c08ee91548",
+      "name": "DB_SaveIncidentState",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        14100
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT 1"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "fe11de26-db81-4e60-be7c-196cbd3ab5f6",
+      "name": "Sticky Note: 21 Notification & Approval Engine",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        14800
+      ],
+      "parameters": {
+        "content": "## 21 Notification & Approval Engine",
+        "height": 800,
+        "width": 1200,
+        "color": 8
+      }
+    },
+    {
+      "id": "cee46ed5-764a-43f6-9fa3-dbf198711ef2",
+      "name": "CODE_NotificationPolicyEngine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        15000
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst priority = (globalJson.incident || {}).priority || 'P4';\nconst policy = { require_approval: false, channels: [] };\n\nif (priority === 'P1') {\n    policy.require_approval = true;\n    policy.channels = ['Slack', 'Email'];\n} else if (priority === 'P2') {\n    policy.channels = ['Slack', 'Email'];\n} else if (priority === 'P3') {\n    policy.channels = ['Slack'];\n}\n\nglobalJson.notification_policy = policy;\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "3c343b67-cd11-43f1-b7a1-aa5abfaec10a",
+      "name": "IF_RequiresApproval",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        300,
+        15000
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.notification_policy.require_approval }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5d164e06-910c-47c6-973f-cdb09c1d44b7",
+      "name": "WAIT_ForApproval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        600,
+        14900
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "webhookPath": "approve-incident"
+      }
+    },
+    {
+      "id": "73853986-8598-4a05-8b83-17ac14038433",
+      "name": "CODE_EscalationLogic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        900,
+        14900
+      ],
+      "parameters": {
+        "jsCode": "\n// If wait timeout hit, escalate\n$json.incident.escalated = true;\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "34c9628f-7758-47b0-83f2-f4f7c0633337",
+      "name": "CODE_NotificationRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        900,
+        15100
+      ],
+      "parameters": {
+        "jsCode": "\n// Routes to different channels based on policy.channels\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "669b2046-0333-4d6e-8157-cfdcfd58f5e1",
+      "name": "HTTP_SlackWebhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        15100
+      ],
+      "parameters": {
+        "url": "https://hooks.slack.com/services/mock",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "67f20854-8a0e-4e9c-9333-907b8dd04143",
+      "name": "Sticky Note: 22 Multi-Agent AI System",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        15700
+      ],
+      "parameters": {
+        "content": "## 22 Multi-Agent AI System",
+        "height": 800,
+        "width": 1400,
+        "color": 6
+      }
+    },
+    {
+      "id": "8c61cb69-3a8f-4ca7-9ddd-528a7b87c1ca",
+      "name": "AI_IncidentCommander",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        15900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Correlate multiple raw findings, cloud misconfigurations, and container vulnerabilities into a single incident.\"}, {\"role\": \"user\", \"content\": \"{{ JSON.stringify($json) }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "82827e71-d0d5-4b2b-bd5c-17e16baf67ff",
+      "name": "AI_SecurityAnalyst",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        0,
+        15900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Analyze technical vulnerability data and classify technical risk.\"}, {\"role\": \"user\", \"content\": \"{{ JSON.stringify($json) }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cf0ca46f-c219-4464-b739-fd101a1d635e",
+      "name": "AI_ThreatAnalyst",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        300,
+        15900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Analyze Threat Intelligence, EPSS, and KEV to determine exploitability.\"}, {\"role\": \"user\", \"content\": \"{{ JSON.stringify($json) }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "0b0946ac-5c68-470d-93e9-cc4ef39d462b",
+      "name": "AI_ExecutiveAnalyst",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        600,
+        15900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Translate technical risk into business impact based on Business Metrics.\"}, {\"role\": \"user\", \"content\": \"{{ JSON.stringify($json) }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "07fb93f6-7c05-4d38-b10a-be3bb112dee1",
+      "name": "AI_RemediationPlanner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        15900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Develop step-by-step remediation strategies and calculate estimated hours.\"}, {\"role\": \"user\", \"content\": \"{{ JSON.stringify($json) }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "87ba78b9-c03d-4cb9-b7cf-f3767d366002",
+      "name": "AI_ComplianceAdvisor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        15900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Map findings to frameworks (CIS, NIST CSF, OWASP, SOC2, ISO27001), explain compliance impact, recommend remediation priorities, and estimate compliance improvement after fixes.\"}, {\"role\": \"user\", \"content\": \"{{ JSON.stringify($json) }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7247ea20-49d1-4d0e-ba87-e72272004e11",
+      "name": "AI_QualityValidator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        15900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Review all previous AI outputs, ensure consistency, and generate final JSON report.\"}, {\"role\": \"user\", \"content\": \"{{ JSON.stringify($json) }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4f0a0ce7-f923-4850-8566-ce3158b83d04",
+      "name": "Sticky Note: 23 AI Investigation Engine",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        16600
+      ],
+      "parameters": {
+        "content": "## 23 AI Investigation Engine",
+        "height": 800,
+        "width": 1600,
+        "color": 6
+      }
+    },
+    {
+      "id": "26572cb4-b0f1-49ad-939f-07d239d3cfd1",
+      "name": "CODE_InvestigationGateway",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        16800
+      ],
+      "parameters": {
+        "jsCode": "\n// Accepts GET /investigation requests routed from API Gateway\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "a1d332df-96c3-4499-8684-85fbe096ecdb",
+      "name": "CODE_ContextBuilder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        16800
+      ],
+      "parameters": {
+        "jsCode": "\n// Fetch EVERYTHING from DB for the incident\nconst globalJson = $json;\nglobalJson.investigation_context = {\n    incident: { id: \"INC-123\", status: \"open\" },\n    findings: [],\n    risk_score: 95,\n    threat_intelligence: {},\n    cloud_findings: [],\n    iac_findings: [],\n    audit_trail: []\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "78cfea96-6094-49f4-9200-36b9d21bc5da",
+      "name": "AI_IntentDetector",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        600,
+        16800
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Analyze the user question and determine intent: [Incident, Threat, Compliance, Executive].\"}, {\"role\": \"user\", \"content\": \"{{ $json.question }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b30718a2-0336-4268-a098-29002558c0b0",
+      "name": "AI_IncidentInvestigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        16600
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "acaad594-40c3-4f87-acf1-ec05cc6335d4",
+      "name": "AI_ThreatAnalysis_Investigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        16750
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "baae2e4a-3625-439a-b6a3-f692809abbe1",
+      "name": "AI_Compliance_Investigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        16900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "47bc6a44-41a5-480d-87ba-b765c682cae3",
+      "name": "AI_Executive_Investigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        17050
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "245cbfa6-fdca-4dc1-a050-0852b8d808f6",
+      "name": "CODE_ResponseGenerator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        16800
+      ],
+      "parameters": {
+        "jsCode": "\n// Final Answer\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "d20c8f55-9ed6-4afb-a459-d22173eb0b0f",
+      "name": "Sticky Note: 24 Executive Governance & Scorecards",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        17500
+      ],
+      "parameters": {
+        "content": "## 24 Executive Governance & Scorecards",
+        "height": 800,
+        "width": 1000,
+        "color": 6
+      }
+    },
+    {
+      "id": "94ba51b7-7f52-46ec-a909-4e210e5b73bf",
+      "name": "CODE_ComplianceEngine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        17700
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst findings = globalJson.vulnerabilities || [];\nconst compliance = { mappings: [] };\n\nfindings.forEach(f => {\n    compliance.mappings.push({\n        finding: f.name || f.hash,\n        frameworks: [\n            { name: \"OWASP\", control: \"A05\" },\n            { name: \"CIS\", control: \"9.2\" },\n            { name: \"NIST CSF\", control: \"PR.DS\" }\n        ]\n    });\n});\n\nglobalJson.compliance = compliance;\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "09b9b656-e9bb-445e-a21d-54e59ac58aba",
+      "name": "CODE_ExecutiveScorecard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        17700
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.scorecards = {\n    operational: {\n        scan_success_rate: \"99%\",\n        avg_scan_duration: \"45s\",\n        cache_hit_rate: \"85%\"\n    },\n    security: {\n        critical_findings: (globalJson.vulnerabilities || []).length,\n        cloud_misconfigs: (globalJson.cloud_findings || []).length\n    },\n    executive: {\n        overall_security_score: globalJson.risk_score || 90,\n        mttd: \"4h\",\n        mttr: \"24h\"\n    },\n    business: {\n        production_risk: \"High\",\n        compliance_coverage: \"95%\"\n    }\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "a479f7e4-790b-4776-bfa1-2dbafa33a1da",
+      "name": "CODE_ComplianceDashboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        17700
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.compliance.percentages = {\n    OWASP: \"91%\",\n    CIS: \"87%\",\n    NIST: \"93%\",\n    SOC2: \"89%\",\n    ISO27001: \"85%\"\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "40940057-6614-4817-9379-a0de2018f901",
+      "name": "CODE_ExecutiveRiskIndex",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        900,
+        17700
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst riskScore = globalJson.risk_score || 90;\nlet grade = \"A\";\nif (riskScore < 90) grade = \"B\";\nif (riskScore < 70) grade = \"C\";\nif (riskScore < 50) grade = \"F\";\n\nglobalJson.scorecards.executive_risk_index = {\n    security_score: riskScore,\n    business_risk: 31,\n    compliance_score: 88,\n    operational_health: 95,\n    overall_grade: grade\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "45c9a096-32dc-4427-b6a6-eb00931fc17f",
+      "name": "CODE_ReportGenerator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        17700
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\n\n// Construct the final normalized payload structure\nconst finalPayload = {\n    workflow_metadata: { timestamp: new Date().toISOString() },\n    asset: {},\n    cmdb: globalJson.asset_context || {},\n    evidence: {},\n    dns: globalJson.dns || {},\n    ssl: globalJson.ssl || {},\n    headers: globalJson.headers || {},\n    ports: globalJson.ports || [],\n    vulnerabilities: globalJson.vulnerabilities || [],\n    cloud: globalJson.cloud_findings || {},\n    containers: globalJson.container_findings || {},\n    threat_intelligence: globalJson.threat_intelligence || {},\n    historical: globalJson.historical || {},\n    changes: globalJson.changes || {},\n    incident: globalJson.incident || {},\n    tickets: globalJson.tickets || {},\n    notifications: globalJson.notification_policy || {},\n    approvals: {},\n    risk: { score: globalJson.risk_score, factors: globalJson.risk_factors },\n    trend: globalJson.trends || {},\n    compliance: globalJson.compliance || {},\n    scorecards: globalJson.scorecards || {},\n    reports: {\n        executive: \"Generated PDF summary...\",\n        technical: \"Generated Technical JSON...\",\n    },\n    ai: globalJson.ai_analysis || {},\n    execution: {},\n    platform: {},\n    plugins: globalJson.plugins_enabled || [],\n    rbac: {},\n    api: {},\n    iac: globalJson.iac || {},\n    integrations: {},\n    siem: globalJson.siem || {},\n    events: globalJson.events || {},\n    metrics: {}\n};\n\nreturn finalPayload;\n"
+      }
+    },
+    {
+      "id": "7596fe94-8f55-41c4-8bd0-20c9843a4af1",
+      "name": "Sticky Note: 25 Observability Layer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        18400
+      ],
+      "parameters": {
+        "content": "## 25 Observability Layer",
+        "height": 800,
+        "width": 1000,
+        "color": 8
+      }
+    },
+    {
+      "id": "22565a5d-8026-4638-9817-3b03d9dabb28",
+      "name": "CODE_PlatformHealthMonitor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        18600
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.observability = {\n    platform_health: {\n        workflow_success_rate: \"99.9%\",\n        queue_depth: 0,\n        api_latency_ms: 45,\n        db_latency_ms: 12\n    },\n    incidents: [] // Self-monitoring incidents\n};\nif (globalJson.observability.platform_health.api_latency_ms > 1000) {\n    globalJson.observability.incidents.push(\"API Latency High\");\n}\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "ac410382-2bcf-4969-b82a-70aba8112df2",
+      "name": "CODE_AIMetricsTracker",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        18600
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.observability.ai_metrics = {\n    prompt_tokens: 14500,\n    completion_tokens: 2100,\n    cost_usd: 0.15,\n    latency_ms: 3200,\n    model: \"gpt-4-turbo\"\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "a2356049-2105-46c7-b05d-0d80ce4841c7",
+      "name": "CODE_DashboardRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        18600
+      ],
+      "parameters": {
+        "jsCode": "\n// Routes observability metrics to Executive, SOC, Operations, Platform, AI Dashboards\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "54a3cdea-0315-48cc-8aea-63870db89c0f",
+      "name": "Sticky Note: 26 Event Bus & Integration Hub",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        19300
+      ],
+      "parameters": {
+        "content": "## 26 Event Bus & Integration Hub",
+        "height": 800,
+        "width": 1200,
+        "color": 7
+      }
+    },
+    {
+      "id": "834f9b54-1084-4197-8865-c5b60cf6dfad",
+      "name": "CODE_EventMetadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        19500
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.events = {\n    event_id: \"evt_\" + Math.random().toString(36).substr(2, 9),\n    event_type: \"INCIDENT_CREATED\",\n    source: \"Risk Engine\",\n    timestamp: new Date().toISOString(),\n    correlation_id: \"corr_\" + Math.random().toString(36).substr(2, 9),\n    tenant_id: \"tnt_001\"\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "1ba19df2-2450-4dd1-8780-0d78ff013795",
+      "name": "CODE_IntegrationHub",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        19500
+      ],
+      "parameters": {
+        "jsCode": "\n// Routes to ITSM, Messaging, SIEM\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "5fdfb993-66ca-4ca7-b024-7bbac36d421f",
+      "name": "CODE_SIEMRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        19500
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.siem = {\n    routed_to: ['Splunk', 'Sentinel']\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "e75b267e-4148-4b8b-becc-c034bafbd9de",
+      "name": "SIEM_Splunk",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        19400
+      ],
+      "parameters": {
+        "url": "https://splunk.mock",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "0094eb51-2637-4222-b86a-0379b931edb9",
+      "name": "SIEM_Sentinel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        19600
+      ],
+      "parameters": {
+        "url": "https://sentinel.mock",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "2ae6fcb8-ef93-403c-a75a-54fc877a61ce",
+      "name": "MERGE_EventBus",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        19500
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "06a0d3a0-20f6-447d-9f82-bf031542794e",
+      "name": "Sticky Note: 27 PostgreSQL & Notifications",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        20200
+      ],
+      "parameters": {
+        "content": "## 27 PostgreSQL & Notifications",
+        "height": 400,
+        "width": 1000,
+        "color": 5
+      }
+    },
+    {
+      "id": "623880b1-7b39-48a9-885d-83594618868c",
       "name": "CODE_ExecutionSummary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         50,
-        4600
+        20300
       ],
       "parameters": {
         "jsCode": "$json.execution_summary = {\n  assets_scanned: 1,\n  duration: 94,\n  findings: $json.vulnerabilities?.length || 0,\n  critical: $json.risk.score >= 90 ? 1 : 0,\n  high: $json.risk.score >= 70 && $json.risk.score < 90 ? 1 : 0,\n  medium: $json.risk.score >= 40 && $json.risk.score < 70 ? 1 : 0,\n  low: $json.risk.score >= 10 && $json.risk.score < 40 ? 1 : 0,\n  failed_scanners: []\n};\nreturn $json;\n"
       }
     },
     {
-      "id": "ad65a2b8-0898-4375-8179-340d7457fa41",
+      "id": "0be9d1ee-98f7-4980-a571-ba3b1868b7d6",
       "name": "DB_InsertFindings",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         250,
-        4600
+        20300
       ],
       "parameters": {
         "operation": "insert",
@@ -606,13 +3544,13 @@
       }
     },
     {
-      "id": "06eb2df7-e506-472b-83e0-05030a0767c8",
+      "id": "413a9af9-bd41-49da-ada3-7beb3a8707f4",
       "name": "SWITCH_Severity",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
         450,
-        4600
+        20300
       ],
       "parameters": {
         "mode": "rules",
@@ -671,13 +3609,13 @@
       }
     },
     {
-      "id": "0404e8da-5b6f-447b-a743-5c5214edb48b",
+      "id": "ac2e4d2b-a51f-4ed2-9abb-7f2895979255",
       "name": "HTTP_Slack_Critical",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         650,
-        4600
+        20300
       ],
       "parameters": {
         "url": "https://hooks.slack.com/services/YOUR/WEBHOOK",
@@ -695,13 +3633,13 @@
       "continueOnFail": true
     },
     {
-      "id": "79fd8307-4261-416d-965d-44bbc669e015",
-      "name": "MERGE_10",
+      "id": "87f96d4a-6aff-474c-928e-52083139a290",
+      "name": "MERGE_27",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         850,
-        4650
+        20350
       ],
       "parameters": {
         "mode": "wait"
@@ -709,11 +3647,152 @@
     }
   ],
   "connections": {
+    "API_Scan": {
+      "main": [
+        [
+          {
+            "node": "CODE_RBAC_Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API_Investigation": {
+      "main": [
+        [
+          {
+            "node": "CODE_RBAC_Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API_Dashboard": {
+      "main": [
+        [
+          {
+            "node": "CODE_RBAC_Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API_Health": {
+      "main": [
+        [
+          {
+            "node": "CODE_RBAC_Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_RBAC_Validator": {
+      "main": [
+        [
+          {
+            "node": "CODE_API_Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_API_Router": {
+      "main": [
+        [
+          {
+            "node": "Trigger_Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Trigger_GitHub",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Trigger_Schedule",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Trigger_Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger_Webhook": {
+      "main": [
+        [
+          {
+            "node": "CODE_TriggerRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger_GitHub": {
+      "main": [
+        [
+          {
+            "node": "CODE_TriggerRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger_Schedule": {
+      "main": [
+        [
+          {
+            "node": "CODE_TriggerRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger_Manual": {
+      "main": [
+        [
+          {
+            "node": "CODE_TriggerRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_TriggerRouter": {
+      "main": [
+        [
+          {
+            "node": "CRON_Trigger",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CFG_Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "CRON_Trigger": {
       "main": [
         [
           {
-            "node": "MERGE_1",
+            "node": "MERGE_3",
             "type": "main",
             "index": 0
           }
@@ -724,14 +3803,58 @@
       "main": [
         [
           {
-            "node": "MERGE_1",
+            "node": "MERGE_3",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "MERGE_1": {
+    "MERGE_3": {
+      "main": [
+        [
+          {
+            "node": "DB_LoadAssetCMDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_LoadAssetCMDB": {
+      "main": [
+        [
+          {
+            "node": "CODE_AttachAssetContext",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_AttachAssetContext": {
+      "main": [
+        [
+          {
+            "node": "DB_LoadPlugins",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_LoadPlugins": {
+      "main": [
+        [
+          {
+            "node": "CODE_PluginRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_PluginRouter": {
       "main": [
         [
           {
@@ -751,7 +3874,7 @@
       "main": [
         [
           {
-            "node": "MERGE_2",
+            "node": "MERGE_6",
             "type": "main",
             "index": 0
           }
@@ -762,14 +3885,14 @@
       "main": [
         [
           {
-            "node": "MERGE_2",
+            "node": "MERGE_6",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "MERGE_2": {
+    "MERGE_6": {
       "main": [
         [
           {
@@ -789,7 +3912,7 @@
       "main": [
         [
           {
-            "node": "MERGE_3",
+            "node": "MERGE_7",
             "type": "main",
             "index": 0
           }
@@ -800,14 +3923,14 @@
       "main": [
         [
           {
-            "node": "MERGE_3",
+            "node": "MERGE_7",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "MERGE_3": {
+    "MERGE_7": {
       "main": [
         [
           {
@@ -832,7 +3955,7 @@
       "main": [
         [
           {
-            "node": "MERGE_4",
+            "node": "MERGE_8",
             "type": "main",
             "index": 0
           }
@@ -843,7 +3966,7 @@
       "main": [
         [
           {
-            "node": "MERGE_4",
+            "node": "MERGE_8",
             "type": "main",
             "index": 1
           }
@@ -854,14 +3977,14 @@
       "main": [
         [
           {
-            "node": "MERGE_4",
+            "node": "MERGE_8",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "MERGE_4": {
+    "MERGE_8": {
       "main": [
         [
           {
@@ -886,7 +4009,7 @@
       "main": [
         [
           {
-            "node": "MERGE_5",
+            "node": "MERGE_9",
             "type": "main",
             "index": 0
           }
@@ -897,7 +4020,7 @@
       "main": [
         [
           {
-            "node": "MERGE_5",
+            "node": "MERGE_9",
             "type": "main",
             "index": 1
           }
@@ -908,52 +4031,176 @@
       "main": [
         [
           {
-            "node": "MERGE_5",
+            "node": "MERGE_9",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "MERGE_5": {
+    "MERGE_9": {
       "main": [
         [
           {
-            "node": "HTTP_VirusTotal",
+            "node": "Cloud_AWS_Prowler",
             "type": "main",
             "index": 0
           },
           {
-            "node": "HTTP_Shodan",
+            "node": "Cloud_Azure_API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Cloud_GCP_API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP_VirusTotal": {
+    "Cloud_AWS_Prowler": {
       "main": [
         [
           {
-            "node": "MERGE_6",
+            "node": "CODE_CloudNormalizer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP_Shodan": {
+    "Cloud_Azure_API": {
       "main": [
         [
           {
-            "node": "MERGE_6",
+            "node": "CODE_CloudNormalizer",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
     },
-    "MERGE_6": {
+    "Cloud_GCP_API": {
+      "main": [
+        [
+          {
+            "node": "CODE_CloudNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_CloudNormalizer": {
+      "main": [
+        [
+          {
+            "node": "Container_Trivy_FS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Container_Trivy_Image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Container_Trivy_SBOM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container_Trivy_FS": {
+      "main": [
+        [
+          {
+            "node": "CODE_ContainerNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container_Trivy_Image": {
+      "main": [
+        [
+          {
+            "node": "CODE_ContainerNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container_Trivy_SBOM": {
+      "main": [
+        [
+          {
+            "node": "CODE_ContainerNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ContainerNormalizer": {
+      "main": [
+        [
+          {
+            "node": "IaC_Terraform",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IaC_Kubernetes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IaC_Helm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IaC_Terraform": {
+      "main": [
+        [
+          {
+            "node": "CODE_IaCNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IaC_Kubernetes": {
+      "main": [
+        [
+          {
+            "node": "CODE_IaCNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IaC_Helm": {
+      "main": [
+        [
+          {
+            "node": "CODE_IaCNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_IaCNormalizer": {
       "main": [
         [
           {
@@ -968,6 +4215,1320 @@
       "main": [
         [
           {
+            "node": "DB_GetPreviousScan",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CODE_CalculateDelta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_GetPreviousScan": {
+      "main": [
+        [
+          {
+            "node": "MERGE_14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_CalculateDelta": {
+      "main": [
+        [
+          {
+            "node": "MERGE_14",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MERGE_14": {
+      "main": [
+        [
+          {
+            "node": "CODE_ChangeClassifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ChangeClassifier": {
+      "main": [
+        [
+          {
+            "node": "CODE_ChangePriority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ChangePriority": {
+      "main": [
+        [
+          {
+            "node": "CODE_ExtractFindings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ExtractFindings": {
+      "main": [
+        [
+          {
+            "node": "IF_NVD",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF_EPSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF_KEV",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF_Shodan",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF_VirusTotal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF_GreyNoise",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_NVD": {
+      "main": [
+        [
+          {
+            "node": "DB_CacheLookup_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_CacheLookup_NVD": {
+      "main": [
+        [
+          {
+            "node": "IF_CacheValid_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_CacheValid_NVD": {
+      "main": [
+        [
+          {
+            "node": "RETURN_CACHE_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_NVD": {
+      "main": [
+        [
+          {
+            "node": "IF_ApiSuccess_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_ApiSuccess_NVD": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveCache_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_HasStaleCache_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveCache_NVD": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_HasStaleCache_NVD": {
+      "main": [
+        [
+          {
+            "node": "RETURN_STALE_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_NVD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_CACHE_NVD": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_STALE_NVD": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKIP_NVD": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_EPSS": {
+      "main": [
+        [
+          {
+            "node": "DB_CacheLookup_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_CacheLookup_EPSS": {
+      "main": [
+        [
+          {
+            "node": "IF_CacheValid_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_CacheValid_EPSS": {
+      "main": [
+        [
+          {
+            "node": "RETURN_CACHE_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_EPSS": {
+      "main": [
+        [
+          {
+            "node": "IF_ApiSuccess_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_ApiSuccess_EPSS": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveCache_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_HasStaleCache_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveCache_EPSS": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_HasStaleCache_EPSS": {
+      "main": [
+        [
+          {
+            "node": "RETURN_STALE_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_CACHE_EPSS": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_STALE_EPSS": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKIP_EPSS": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_KEV": {
+      "main": [
+        [
+          {
+            "node": "DB_CacheLookup_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_CacheLookup_KEV": {
+      "main": [
+        [
+          {
+            "node": "IF_CacheValid_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_CacheValid_KEV": {
+      "main": [
+        [
+          {
+            "node": "RETURN_CACHE_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_KEV": {
+      "main": [
+        [
+          {
+            "node": "IF_ApiSuccess_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_ApiSuccess_KEV": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveCache_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_HasStaleCache_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveCache_KEV": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_HasStaleCache_KEV": {
+      "main": [
+        [
+          {
+            "node": "RETURN_STALE_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_CACHE_KEV": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_STALE_KEV": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKIP_KEV": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_Shodan": {
+      "main": [
+        [
+          {
+            "node": "DB_CacheLookup_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_CacheLookup_Shodan": {
+      "main": [
+        [
+          {
+            "node": "IF_CacheValid_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_CacheValid_Shodan": {
+      "main": [
+        [
+          {
+            "node": "RETURN_CACHE_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Shodan": {
+      "main": [
+        [
+          {
+            "node": "IF_ApiSuccess_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_ApiSuccess_Shodan": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveCache_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_HasStaleCache_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveCache_Shodan": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_HasStaleCache_Shodan": {
+      "main": [
+        [
+          {
+            "node": "RETURN_STALE_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_CACHE_Shodan": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_STALE_Shodan": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKIP_Shodan": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "DB_CacheLookup_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_CacheLookup_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "IF_CacheValid_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_CacheValid_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "RETURN_CACHE_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "IF_ApiSuccess_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_ApiSuccess_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveCache_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_HasStaleCache_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveCache_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_HasStaleCache_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "RETURN_STALE_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_CACHE_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_STALE_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKIP_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "DB_CacheLookup_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_CacheLookup_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "IF_CacheValid_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_CacheValid_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "RETURN_CACHE_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "IF_ApiSuccess_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_ApiSuccess_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveCache_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_HasStaleCache_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveCache_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_HasStaleCache_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "RETURN_STALE_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_GreyNoise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_CACHE_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_STALE_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKIP_GreyNoise": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "DB_CacheLookup_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_CacheLookup_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "IF_CacheValid_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_CacheValid_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "RETURN_CACHE_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "IF_ApiSuccess_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_ApiSuccess_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveCache_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_HasStaleCache_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveCache_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_HasStaleCache_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "RETURN_STALE_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKIP_AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_CACHE_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RETURN_STALE_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKIP_AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "MERGE_ThreatIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MERGE_ThreatIntel": {
+      "main": [
+        [
+          {
+            "node": "CODE_ThreatIntelAggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ThreatIntelAggregator": {
+      "main": [
+        [
+          {
+            "node": "DB_LoadHistoricalTrends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_LoadHistoricalTrends": {
+      "main": [
+        [
+          {
+            "node": "CODE_EngineRiskTrend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CODE_EngineFindingVelocity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CODE_EngineAssetGrowth",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CODE_EngineScannerHealth",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CODE_EngineThreatEvolution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_EngineRiskTrend": {
+      "main": [
+        [
+          {
+            "node": "MERGE_TrendEngines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_EngineFindingVelocity": {
+      "main": [
+        [
+          {
+            "node": "MERGE_TrendEngines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_EngineAssetGrowth": {
+      "main": [
+        [
+          {
+            "node": "MERGE_TrendEngines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_EngineScannerHealth": {
+      "main": [
+        [
+          {
+            "node": "MERGE_TrendEngines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_EngineThreatEvolution": {
+      "main": [
+        [
+          {
+            "node": "MERGE_TrendEngines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MERGE_TrendEngines": {
+      "main": [
+        [
+          {
+            "node": "CODE_TrendConfidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_TrendConfidence": {
+      "main": [
+        [
+          {
+            "node": "CODE_ExtractRawMetrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ExtractRawMetrics": {
+      "main": [
+        [
+          {
+            "node": "CODE_OperationalMetrics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CODE_SecurityMetrics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CODE_ExecutiveMetrics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CODE_BusinessMetrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_OperationalMetrics": {
+      "main": [
+        [
+          {
+            "node": "MERGE_SecurityIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_SecurityMetrics": {
+      "main": [
+        [
+          {
+            "node": "MERGE_SecurityIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ExecutiveMetrics": {
+      "main": [
+        [
+          {
+            "node": "MERGE_SecurityIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_BusinessMetrics": {
+      "main": [
+        [
+          {
+            "node": "MERGE_SecurityIntel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MERGE_SecurityIntel": {
+      "main": [
+        [
+          {
+            "node": "CODE_SecurityIntelligenceAggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_SecurityIntelligenceAggregator": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveSecurityIntelligence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveSecurityIntelligence": {
+      "main": [
+        [
+          {
             "node": "CODE_CalculateRisk",
             "type": "main",
             "index": 0
@@ -979,41 +5540,510 @@
       "main": [
         [
           {
-            "node": "AI_ExecutiveSummary",
+            "node": "CODE_IncidentCorrelator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_IncidentCorrelator": {
+      "main": [
+        [
+          {
+            "node": "CODE_PriorityMatrix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_PriorityMatrix": {
+      "main": [
+        [
+          {
+            "node": "CODE_TicketDeduplication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_TicketDeduplication": {
+      "main": [
+        [
+          {
+            "node": "IF_IsDuplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_IsDuplicate": {
+      "main": [
+        [
+          {
+            "node": "HTTP_GitHubUpdateIssue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "TicketRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TicketRouter": {
+      "main": [
+        [
+          {
+            "node": "HTTP_GitHubCreateIssue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_GitHubCreateIssue": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveIncidentState",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_GitHubUpdateIssue": {
+      "main": [
+        [
+          {
+            "node": "DB_SaveIncidentState",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_SaveIncidentState": {
+      "main": [
+        [
+          {
+            "node": "CODE_NotificationPolicyEngine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_NotificationPolicyEngine": {
+      "main": [
+        [
+          {
+            "node": "IF_RequiresApproval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_RequiresApproval": {
+      "main": [
+        [
+          {
+            "node": "WAIT_ForApproval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CODE_NotificationRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WAIT_ForApproval": {
+      "main": [
+        [
+          {
+            "node": "CODE_EscalationLogic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_EscalationLogic": {
+      "main": [
+        [
+          {
+            "node": "CODE_NotificationRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_NotificationRouter": {
+      "main": [
+        [
+          {
+            "node": "HTTP_SlackWebhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_SlackWebhook": {
+      "main": [
+        [
+          {
+            "node": "AI_IncidentCommander",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_IncidentCommander": {
+      "main": [
+        [
+          {
+            "node": "AI_SecurityAnalyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_SecurityAnalyst": {
+      "main": [
+        [
+          {
+            "node": "AI_ThreatAnalyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_ThreatAnalyst": {
+      "main": [
+        [
+          {
+            "node": "AI_ExecutiveAnalyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_ExecutiveAnalyst": {
+      "main": [
+        [
+          {
+            "node": "AI_RemediationPlanner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_RemediationPlanner": {
+      "main": [
+        [
+          {
+            "node": "AI_ComplianceAdvisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_ComplianceAdvisor": {
+      "main": [
+        [
+          {
+            "node": "AI_QualityValidator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_QualityValidator": {
+      "main": [
+        [
+          {
+            "node": "CODE_InvestigationGateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_InvestigationGateway": {
+      "main": [
+        [
+          {
+            "node": "CODE_ContextBuilder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ContextBuilder": {
+      "main": [
+        [
+          {
+            "node": "AI_IntentDetector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_IntentDetector": {
+      "main": [
+        [
+          {
+            "node": "AI_IncidentInvestigation",
             "type": "main",
             "index": 0
           },
           {
-            "node": "CODE_AICostTracker",
+            "node": "AI_ThreatAnalysis_Investigation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI_Compliance_Investigation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI_Executive_Investigation",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI_ExecutiveSummary": {
+    "AI_IncidentInvestigation": {
       "main": [
         [
           {
-            "node": "MERGE_9",
+            "node": "CODE_ResponseGenerator",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "CODE_AICostTracker": {
+    "AI_ThreatAnalysis_Investigation": {
       "main": [
         [
           {
-            "node": "MERGE_9",
+            "node": "CODE_ResponseGenerator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_Compliance_Investigation": {
+      "main": [
+        [
+          {
+            "node": "CODE_ResponseGenerator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_Executive_Investigation": {
+      "main": [
+        [
+          {
+            "node": "CODE_ResponseGenerator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ResponseGenerator": {
+      "main": [
+        [
+          {
+            "node": "CODE_ComplianceEngine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ComplianceEngine": {
+      "main": [
+        [
+          {
+            "node": "CODE_ExecutiveScorecard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ExecutiveScorecard": {
+      "main": [
+        [
+          {
+            "node": "CODE_ComplianceDashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ComplianceDashboard": {
+      "main": [
+        [
+          {
+            "node": "CODE_ExecutiveRiskIndex",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ExecutiveRiskIndex": {
+      "main": [
+        [
+          {
+            "node": "CODE_ReportGenerator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ReportGenerator": {
+      "main": [
+        [
+          {
+            "node": "CODE_PlatformHealthMonitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_PlatformHealthMonitor": {
+      "main": [
+        [
+          {
+            "node": "CODE_AIMetricsTracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_AIMetricsTracker": {
+      "main": [
+        [
+          {
+            "node": "CODE_DashboardRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_DashboardRouter": {
+      "main": [
+        [
+          {
+            "node": "CODE_EventMetadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_EventMetadata": {
+      "main": [
+        [
+          {
+            "node": "CODE_IntegrationHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_IntegrationHub": {
+      "main": [
+        [
+          {
+            "node": "CODE_SIEMRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_SIEMRouter": {
+      "main": [
+        [
+          {
+            "node": "SIEM_Splunk",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SIEM_Sentinel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SIEM_Splunk": {
+      "main": [
+        [
+          {
+            "node": "MERGE_EventBus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SIEM_Sentinel": {
+      "main": [
+        [
+          {
+            "node": "MERGE_EventBus",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "MERGE_9": {
+    "MERGE_EventBus": {
       "main": [
         [
           {
@@ -1043,7 +6073,7 @@
       "main": [
         [
           {
-            "node": "MERGE_10",
+            "node": "MERGE_27",
             "type": "main",
             "index": 0
           }
@@ -1054,7 +6084,7 @@
       "main": [
         [
           {
-            "node": "MERGE_10",
+            "node": "MERGE_27",
             "type": "main",
             "index": 1
           }
@@ -1065,7 +6095,7 @@
       "main": [
         [
           {
-            "node": "MERGE_10",
+            "node": "MERGE_27",
             "type": "main",
             "index": 0
           }
@@ -1076,7 +6106,7 @@
       "main": [
         [
           {
-            "node": "MERGE_10",
+            "node": "MERGE_27",
             "type": "main",
             "index": 1
           }
