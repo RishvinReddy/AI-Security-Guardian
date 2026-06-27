@@ -39,7 +39,7 @@ By unifying open-source security tooling (Nmap, Nuclei, Trivy, Prowler) with a s
 - **100%** Open Source Architecture
 
 ### 📸 Screenshots
-*(Coming soon)*
+Coming soon:
 - **SOC Dashboard**: `assets/soc-dashboard.png`
 - **AI Investigation Chat**: `assets/ai-investigation.png`
 - **SIEM Event Payload**: `assets/siem-payload.png`
