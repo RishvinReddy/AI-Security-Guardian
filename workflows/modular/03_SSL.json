@@ -1,0 +1,66 @@
+{
+  "name": "03_SSL",
+  "nodes": [
+    {
+      "id": "3d9a3cb4-1c3f-46fc-8501-4f827907168d",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "id": "848095a8-9f06-41b3-adc5-2fca09a700ef",
+      "name": "Run 03_SSL",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "id": "da4b8ebe-4738-4542-aaff-6e6c04688ec9",
+      "name": "Send to Normalizer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run 03_SSL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run 03_SSL": {
+      "main": [
+        [
+          {
+            "node": "Send to Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "12_Risk_Engine",
+  "nodes": [
+    {
+      "id": "c0f6feb7-8571-4b7f-9c13-22a5705fa7f1",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "id": "317c16ba-bd6e-465b-b11f-3832d95bade9",
+      "name": "Process Data",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

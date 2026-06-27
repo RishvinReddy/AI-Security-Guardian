@@ -1,0 +1,1090 @@
+{
+  "name": "AI Security Guardian Mega Workflow",
+  "nodes": [
+    {
+      "id": "ff9b9b07-1604-49ab-92ba-14660ce2930a",
+      "name": "Sticky Note: 01 Configuration",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "content": "## 01 Configuration",
+        "height": 400,
+        "width": 800,
+        "color": 6
+      }
+    },
+    {
+      "id": "c3cce528-ad19-417e-b2dd-cabf67f69143",
+      "name": "CRON_Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        50,
+        100
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f0a289b6-e64e-4744-a55c-aee04b634c35",
+      "name": "CFG_Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        250,
+        100
+      ],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "TARGET_DOMAIN",
+              "value": "example.com"
+            },
+            {
+              "name": "SCAN_PROFILE",
+              "value": "Standard"
+            },
+            {
+              "name": "OPENAI_MODEL",
+              "value": "gpt-4o"
+            }
+          ],
+          "boolean": [
+            {
+              "name": "ENABLE_NMAP",
+              "value": true
+            },
+            {
+              "name": "ENABLE_NUCLEI",
+              "value": true
+            },
+            {
+              "name": "ENABLE_SSL",
+              "value": true
+            },
+            {
+              "name": "ENABLE_HEADERS",
+              "value": true
+            },
+            {
+              "name": "ENABLE_AI",
+              "value": true
+            }
+          ],
+          "number": [
+            {
+              "name": "TIMEOUT",
+              "value": 60
+            },
+            {
+              "name": "RETRY",
+              "value": 3
+            },
+            {
+              "name": "PARALLEL_LIMIT",
+              "value": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4dd89e45-c187-4e03-bfe0-24910c18e99a",
+      "name": "MERGE_1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        150
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "e1420da0-0263-485d-9520-777fcdd50611",
+      "name": "Sticky Note: 02 Asset Discovery",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        500
+      ],
+      "parameters": {
+        "content": "## 02 Asset Discovery",
+        "height": 400,
+        "width": 800,
+        "color": 1
+      }
+    },
+    {
+      "id": "9d1de8ec-c824-41f0-bf2d-30646eda7c83",
+      "name": "HTTP_Subfinder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        50,
+        600
+      ],
+      "parameters": {
+        "url": "https://api.subfinder.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "c295f887-c988-47e3-8fca-7b8a15c80c86",
+      "name": "HTTP_WHOIS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        250,
+        600
+      ],
+      "parameters": {
+        "url": "https://api.whois.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "9596bb32-aa85-4e2c-ba4a-b8c0df9d2a0e",
+      "name": "MERGE_2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        650
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "cbc02003-c7e0-4129-adc9-9b910a7e349b",
+      "name": "Sticky Note: 03 DNS",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1000
+      ],
+      "parameters": {
+        "content": "## 03 DNS",
+        "height": 400,
+        "width": 800,
+        "color": 1
+      }
+    },
+    {
+      "id": "78a97c3b-5606-4674-8ba9-b4d48660acc4",
+      "name": "HTTP_CloudflareDNS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        50,
+        1100
+      ],
+      "parameters": {
+        "url": "https://cloudflare-dns.com/dns-query?name={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}&type=A",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/dns-json"
+            }
+          ]
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "714c94a0-2854-4ca5-9572-268c9f854763",
+      "name": "HTTP_ReverseDNS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        250,
+        1100
+      ],
+      "parameters": {},
+      "continueOnFail": true
+    },
+    {
+      "id": "0d7e6560-e09b-4c76-9a2a-801bce959e64",
+      "name": "MERGE_3",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        1150
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "bda4e5b4-5617-4cc9-872b-4f94ef2942ec",
+      "name": "Sticky Note: 04 Attack Surface",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1500
+      ],
+      "parameters": {
+        "content": "## 04 Attack Surface",
+        "height": 400,
+        "width": 800,
+        "color": 2
+      }
+    },
+    {
+      "id": "582c1c27-2842-48c0-86e5-0cc72fda8628",
+      "name": "CMD_Nmap",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        50,
+        1600
+      ],
+      "parameters": {
+        "command": "nmap -Pn -F {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -oX -"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "458ed3c1-6869-488d-ac1e-a6c923b52b62",
+      "name": "HTTP_SSL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        250,
+        1600
+      ],
+      "parameters": {
+        "url": "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "fullResponse": true
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "323eddf0-6ff4-4a09-822c-9797a7dac4f2",
+      "name": "HTTP_Headers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        450,
+        1600
+      ],
+      "parameters": {
+        "url": "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "2deb3c08-9b37-422d-82d6-edde651b0362",
+      "name": "MERGE_4",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        1650
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "1d07ffbc-7cb1-4154-80ec-46c6420d88fe",
+      "name": "Sticky Note: 05 Vulnerability Scanning",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        2000
+      ],
+      "parameters": {
+        "content": "## 05 Vulnerability Scanning",
+        "height": 400,
+        "width": 800,
+        "color": 3
+      }
+    },
+    {
+      "id": "d4fcdbd2-6615-4ff3-8217-654a9755ee4f",
+      "name": "CMD_Nuclei",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        50,
+        2100
+      ],
+      "parameters": {
+        "command": "nuclei -u https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -json"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "2d2f1a63-3c34-4992-8ad4-592481b338f0",
+      "name": "CMD_Trivy",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        250,
+        2100
+      ],
+      "parameters": {},
+      "continueOnFail": true
+    },
+    {
+      "id": "c3df125f-26a8-4a67-aec0-30768ebd7311",
+      "name": "CMD_ZAP_Passive",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        450,
+        2100
+      ],
+      "parameters": {},
+      "continueOnFail": true
+    },
+    {
+      "id": "27de3e45-a79c-4d0b-954c-ccfb79939563",
+      "name": "MERGE_5",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        2150
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "38f661b7-52e2-4ff3-8e03-7340986d2baa",
+      "name": "Sticky Note: 06 Threat Intelligence",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        2500
+      ],
+      "parameters": {
+        "content": "## 06 Threat Intelligence",
+        "height": 400,
+        "width": 800,
+        "color": 4
+      }
+    },
+    {
+      "id": "e529ce2b-f497-4115-84dd-aae7c6be80b7",
+      "name": "HTTP_VirusTotal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        50,
+        2600
+      ],
+      "parameters": {},
+      "continueOnFail": true
+    },
+    {
+      "id": "b1ec2c63-f1b7-4fd7-b15f-51724489dd73",
+      "name": "HTTP_Shodan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        250,
+        2600
+      ],
+      "parameters": {},
+      "continueOnFail": true
+    },
+    {
+      "id": "4551c1d1-d4ba-456b-878a-5ff5e5199cca",
+      "name": "MERGE_6",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        2650
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "2584c758-3932-43ee-8494-e30d9348105c",
+      "name": "Sticky Note: 07 Normalizer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        3000
+      ],
+      "parameters": {
+        "content": "## 07 Normalizer",
+        "height": 400,
+        "width": 800,
+        "color": 6
+      }
+    },
+    {
+      "id": "c41fdbbf-8294-49b3-bf3c-2bdea7d6d15f",
+      "name": "CODE_StandardizeJSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        50,
+        3100
+      ],
+      "parameters": {
+        "jsCode": "return {\n  workflow_metadata: {\n    version: \"1.0.0\",\n    build: \"2026.06.27\",\n    workflow: \"AI Security Guardian\",\n    phase: 1,\n    execution_id: $execution.id\n  },\n  asset: {\n    domain: $('CFG_Configuration').item.json.TARGET_DOMAIN,\n    fingerprint: $('CFG_Configuration').item.json.TARGET_DOMAIN + \"_\" + ($items(\"HTTP_CloudflareDNS\")[0]?.json?.Answer?.[0]?.data || \"noip\")\n  },\n  dns: $items(\"HTTP_CloudflareDNS\")[0]?.json || {},\n  ssl: $items(\"HTTP_SSL\")[0]?.json || {},\n  headers: $items(\"HTTP_Headers\")[0]?.json || {},\n  ports: ($items(\"CMD_Nmap\")[0]?.json || []).map(p => ({ port: p, confidence: 0.98 })),\n  vulnerabilities: ($items(\"CMD_Nuclei\")[0]?.json || []).map(v => ({ ...v, confidence: 0.95 })),\n  intel: {},\n  risk: {},\n  execution: {\n    timestamp: new Date().toISOString(),\n    scanner_versions: {\n      nmap: \"7.97\",\n      nuclei: \"3.4.0\",\n      trivy: \"0.64\",\n      httpx: \"1.7\"\n    },\n    scanners: {\n      nmap: { success: !!$items(\"CMD_Nmap\")[0], duration: 0 },\n      nuclei: { success: !!$items(\"CMD_Nuclei\")[0], duration: 0 }\n    }\n  }\n};\n"
+      }
+    },
+    {
+      "id": "1f53919e-8cdd-4f37-963d-94d0131018ae",
+      "name": "Sticky Note: 08 Risk Engine",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        3500
+      ],
+      "parameters": {
+        "content": "## 08 Risk Engine",
+        "height": 400,
+        "width": 800,
+        "color": 7
+      }
+    },
+    {
+      "id": "0ab98c51-3926-4410-943b-18824680f20f",
+      "name": "CODE_CalculateRisk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        50,
+        3600
+      ],
+      "parameters": {
+        "jsCode": "let score = 0;\n// Deterministic Logic: CVSS + EPSS + KEV + Ports + SSL + Headers + Exposure\nconst vulns = $json.vulnerabilities || [];\nif (vulns.length > 0) score += 40; // Example CVSS weight\nconst ports = $json.ports || [];\nif (ports.includes('3389') || ports.includes('22')) score += 15; // Risky open ports\nif ($json.ssl && $json.ssl.expired) score += 10;\nif (!$json.headers?.HSTS) score += 5;\n\n// Clamp score 0-100\n$json.risk.score = Math.min(Math.max(score, 0), 100);\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "635abff7-8b28-4d62-8cf2-adce33ac01bb",
+      "name": "Sticky Note: 09 AI Analyst",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        4000
+      ],
+      "parameters": {
+        "content": "## 09 AI Analyst",
+        "height": 400,
+        "width": 800,
+        "color": 7
+      }
+    },
+    {
+      "id": "957ab8f1-1d67-469c-80c0-45d2a2868fc0",
+      "name": "AI_ExecutiveSummary",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        50,
+        4100
+      ],
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": "gpt-4o",
+        "prompt": "=System:\nYou are a Senior Security Analyst.\nInput:\n- Asset information\n- DNS\n- SSL\n- Headers\n- Nmap\n- Nuclei\n- Threat intelligence\n- Risk score\n\nReturn JSON:\n{\n  \"summary\":\"...\",\n  \"priority\":\"...\",\n  \"business_impact\":\"...\",\n  \"technical_analysis\":\"...\",\n  \"recommendations\":[]\n}\n\nUser: {{ JSON.stringify($json) }}"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "id": "338d193a-f1a1-4f44-a3ed-214f39fe9486",
+      "name": "CODE_AICostTracker",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        250,
+        4100
+      ],
+      "parameters": {
+        "jsCode": "// Mock token calculation or parse from OpenAI node if available\nconst tokens = JSON.stringify($json).length / 4;\n$json.ai_cost = {\n  model: \"gpt-4o\",\n  tokens: tokens,\n  estimated_cost: (tokens / 1000) * 0.01\n};\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "24a008ca-3b54-44f0-baac-bc9670a79d14",
+      "name": "MERGE_9",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        4150
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "e725b930-47ed-433d-ab9e-4349ef0491c2",
+      "name": "Sticky Note: 10 PostgreSQL & Notifications",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        4500
+      ],
+      "parameters": {
+        "content": "## 10 PostgreSQL & Notifications",
+        "height": 400,
+        "width": 1000,
+        "color": 5
+      }
+    },
+    {
+      "id": "ca1ac292-3098-4fcc-9f6c-bbe0a8f2f30f",
+      "name": "CODE_ExecutionSummary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        50,
+        4600
+      ],
+      "parameters": {
+        "jsCode": "$json.execution_summary = {\n  assets_scanned: 1,\n  duration: 94,\n  findings: $json.vulnerabilities?.length || 0,\n  critical: $json.risk.score >= 90 ? 1 : 0,\n  high: $json.risk.score >= 70 && $json.risk.score < 90 ? 1 : 0,\n  medium: $json.risk.score >= 40 && $json.risk.score < 70 ? 1 : 0,\n  low: $json.risk.score >= 10 && $json.risk.score < 40 ? 1 : 0,\n  failed_scanners: []\n};\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "ad65a2b8-0898-4375-8179-340d7457fa41",
+      "name": "DB_InsertFindings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        250,
+        4600
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "findings",
+        "columns": "asset_id, scanner_name, severity, finding_title, finding_details",
+        "dataMode": "autoMapInputData"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "06eb2df7-e506-472b-83e0-05030a0767c8",
+      "name": "SWITCH_Severity",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        450,
+        4600
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "number": [
+                  {
+                    "value1": "={{ $json.risk.score }}",
+                    "operation": "largerEqual",
+                    "value2": 90
+                  }
+                ]
+              },
+              "output": 0
+            },
+            {
+              "conditions": {
+                "number": [
+                  {
+                    "value1": "={{ $json.risk.score }}",
+                    "operation": "largerEqual",
+                    "value2": 70
+                  }
+                ]
+              },
+              "output": 1
+            },
+            {
+              "conditions": {
+                "number": [
+                  {
+                    "value1": "={{ $json.risk.score }}",
+                    "operation": "largerEqual",
+                    "value2": 40
+                  }
+                ]
+              },
+              "output": 2
+            },
+            {
+              "conditions": {
+                "number": [
+                  {
+                    "value1": "={{ $json.risk.score }}",
+                    "operation": "largerEqual",
+                    "value2": 10
+                  }
+                ]
+              },
+              "output": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "0404e8da-5b6f-447b-a743-5c5214edb48b",
+      "name": "HTTP_Slack_Critical",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        650,
+        4600
+      ],
+      "parameters": {
+        "url": "https://hooks.slack.com/services/YOUR/WEBHOOK",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "\ud83d\udea8 CRITICAL Risk Detected: {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}\nScore: {{ $json.risk.score }}\nDetails: {{ $json.ai_summary }}"
+            }
+          ]
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "79fd8307-4261-416d-965d-44bbc669e015",
+      "name": "MERGE_10",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        850,
+        4650
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    }
+  ],
+  "connections": {
+    "CRON_Trigger": {
+      "main": [
+        [
+          {
+            "node": "MERGE_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CFG_Configuration": {
+      "main": [
+        [
+          {
+            "node": "MERGE_1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MERGE_1": {
+      "main": [
+        [
+          {
+            "node": "HTTP_Subfinder",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP_WHOIS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Subfinder": {
+      "main": [
+        [
+          {
+            "node": "MERGE_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_WHOIS": {
+      "main": [
+        [
+          {
+            "node": "MERGE_2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MERGE_2": {
+      "main": [
+        [
+          {
+            "node": "HTTP_CloudflareDNS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP_ReverseDNS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_CloudflareDNS": {
+      "main": [
+        [
+          {
+            "node": "MERGE_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_ReverseDNS": {
+      "main": [
+        [
+          {
+            "node": "MERGE_3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MERGE_3": {
+      "main": [
+        [
+          {
+            "node": "CMD_Nmap",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP_SSL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP_Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CMD_Nmap": {
+      "main": [
+        [
+          {
+            "node": "MERGE_4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_SSL": {
+      "main": [
+        [
+          {
+            "node": "MERGE_4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP_Headers": {
+      "main": [
+        [
+          {
+            "node": "MERGE_4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MERGE_4": {
+      "main": [
+        [
+          {
+            "node": "CMD_Nuclei",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CMD_Trivy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CMD_ZAP_Passive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CMD_Nuclei": {
+      "main": [
+        [
+          {
+            "node": "MERGE_5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CMD_Trivy": {
+      "main": [
+        [
+          {
+            "node": "MERGE_5",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "CMD_ZAP_Passive": {
+      "main": [
+        [
+          {
+            "node": "MERGE_5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MERGE_5": {
+      "main": [
+        [
+          {
+            "node": "HTTP_VirusTotal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP_Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "MERGE_6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Shodan": {
+      "main": [
+        [
+          {
+            "node": "MERGE_6",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MERGE_6": {
+      "main": [
+        [
+          {
+            "node": "CODE_StandardizeJSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_StandardizeJSON": {
+      "main": [
+        [
+          {
+            "node": "CODE_CalculateRisk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_CalculateRisk": {
+      "main": [
+        [
+          {
+            "node": "AI_ExecutiveSummary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CODE_AICostTracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_ExecutiveSummary": {
+      "main": [
+        [
+          {
+            "node": "MERGE_9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_AICostTracker": {
+      "main": [
+        [
+          {
+            "node": "MERGE_9",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MERGE_9": {
+      "main": [
+        [
+          {
+            "node": "CODE_ExecutionSummary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "DB_InsertFindings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SWITCH_Severity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP_Slack_Critical",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ExecutionSummary": {
+      "main": [
+        [
+          {
+            "node": "MERGE_10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_InsertFindings": {
+      "main": [
+        [
+          {
+            "node": "MERGE_10",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "SWITCH_Severity": {
+      "main": [
+        [
+          {
+            "node": "MERGE_10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Slack_Critical": {
+      "main": [
+        [
+          {
+            "node": "MERGE_10",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

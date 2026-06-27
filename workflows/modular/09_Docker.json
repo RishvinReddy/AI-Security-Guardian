@@ -1,0 +1,66 @@
+{
+  "name": "09_Docker",
+  "nodes": [
+    {
+      "id": "562973b9-cbe6-4d9e-9d7a-55724fe952ff",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "id": "fb07aad2-7431-4076-a897-f9b5651c4070",
+      "name": "Run 09_Docker",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "id": "4c6c6777-238c-4357-9d1e-02ad0b00e342",
+      "name": "Send to Normalizer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run 09_Docker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run 09_Docker": {
+      "main": [
+        [
+          {
+            "node": "Send to Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

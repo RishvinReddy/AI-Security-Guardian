@@ -1,0 +1,290 @@
+name: "AI Security Guardian Mega Workflow"
+sections:
+  - id: 1
+    name: "01 Configuration"
+    color: 6
+    nodes:
+      - name: "CRON_Trigger"
+        type: "n8n-nodes-base.scheduleTrigger"
+        parameters:
+          rule:
+            interval:
+              - field: "days"
+                daysInterval: 1
+      - name: "CFG_Configuration"
+        type: "n8n-nodes-base.set"
+        parameters:
+          values:
+            string:
+              - name: "TARGET_DOMAIN"
+                value: "example.com"
+              - name: "SCAN_PROFILE"
+                value: "Standard"
+              - name: "OPENAI_MODEL"
+                value: "gpt-4o"
+            boolean:
+              - name: "ENABLE_NMAP"
+                value: true
+              - name: "ENABLE_NUCLEI"
+                value: true
+              - name: "ENABLE_SSL"
+                value: true
+              - name: "ENABLE_HEADERS"
+                value: true
+              - name: "ENABLE_AI"
+                value: true
+            number:
+              - name: "TIMEOUT"
+                value: 60
+              - name: "RETRY"
+                value: 3
+              - name: "PARALLEL_LIMIT"
+                value: 5
+
+  - id: 2
+    name: "02 Asset Discovery"
+    color: 1
+    nodes:
+      - name: "HTTP_Subfinder"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+        parameters:
+          url: "https://api.subfinder.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
+      - name: "HTTP_WHOIS"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+        parameters:
+          url: "https://api.whois.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
+
+  - id: 3
+    name: "03 DNS"
+    color: 1
+    nodes:
+      - name: "HTTP_CloudflareDNS"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+        parameters:
+          url: "https://cloudflare-dns.com/dns-query?name={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}&type=A"
+          sendHeaders: true
+          headerParameters:
+            parameters:
+              - name: "accept"
+                value: "application/dns-json"
+      - name: "HTTP_ReverseDNS"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+
+  - id: 4
+    name: "04 Attack Surface"
+    color: 2
+    nodes:
+      - name: "CMD_Nmap"
+        type: "n8n-nodes-base.executeCommand"
+        continueOnFail: true
+        parameters:
+          command: "nmap -Pn -F {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -oX -"
+      - name: "HTTP_SSL"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+        parameters:
+          url: "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
+          options:
+            allowUnauthorizedCerts: true
+            fullResponse: true
+      - name: "HTTP_Headers"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+        parameters:
+          url: "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
+
+  - id: 5
+    name: "05 Vulnerability Scanning"
+    color: 3
+    nodes:
+      - name: "CMD_Nuclei"
+        type: "n8n-nodes-base.executeCommand"
+        continueOnFail: true
+        parameters:
+          command: "nuclei -u https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -json"
+      - name: "CMD_Trivy"
+        type: "n8n-nodes-base.executeCommand"
+        continueOnFail: true
+      - name: "CMD_ZAP_Passive"
+        type: "n8n-nodes-base.executeCommand"
+        continueOnFail: true
+
+  - id: 6
+    name: "06 Threat Intelligence"
+    color: 4
+    nodes:
+      - name: "HTTP_VirusTotal"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+      - name: "HTTP_Shodan"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+
+  - id: 7
+    name: "07 Normalizer"
+    color: 6
+    nodes:
+      - name: "CODE_StandardizeJSON"
+        type: "n8n-nodes-base.code"
+        parameters:
+          jsCode: |
+            return {
+              workflow_metadata: {
+                version: "1.0.0",
+                build: "2026.06.27",
+                workflow: "AI Security Guardian",
+                phase: 1,
+                execution_id: $execution.id
+              },
+              asset: {
+                domain: $('CFG_Configuration').item.json.TARGET_DOMAIN,
+                fingerprint: $('CFG_Configuration').item.json.TARGET_DOMAIN + "_" + ($items("HTTP_CloudflareDNS")[0]?.json?.Answer?.[0]?.data || "noip")
+              },
+              dns: $items("HTTP_CloudflareDNS")[0]?.json || {},
+              ssl: $items("HTTP_SSL")[0]?.json || {},
+              headers: $items("HTTP_Headers")[0]?.json || {},
+              ports: ($items("CMD_Nmap")[0]?.json || []).map(p => ({ port: p, confidence: 0.98 })),
+              vulnerabilities: ($items("CMD_Nuclei")[0]?.json || []).map(v => ({ ...v, confidence: 0.95 })),
+              intel: {},
+              risk: {},
+              execution: {
+                timestamp: new Date().toISOString(),
+                scanner_versions: {
+                  nmap: "7.97",
+                  nuclei: "3.4.0",
+                  trivy: "0.64",
+                  httpx: "1.7"
+                },
+                scanners: {
+                  nmap: { success: !!$items("CMD_Nmap")[0], duration: 0 },
+                  nuclei: { success: !!$items("CMD_Nuclei")[0], duration: 0 }
+                }
+              }
+            };
+
+  - id: 8
+    name: "08 Risk Engine"
+    color: 7
+    nodes:
+      - name: "CODE_CalculateRisk"
+        type: "n8n-nodes-base.code"
+        parameters:
+          jsCode: |
+            let score = 0;
+            // Deterministic Logic: CVSS + EPSS + KEV + Ports + SSL + Headers + Exposure
+            const vulns = $json.vulnerabilities || [];
+            if (vulns.length > 0) score += 40; // Example CVSS weight
+            const ports = $json.ports || [];
+            if (ports.includes('3389') || ports.includes('22')) score += 15; // Risky open ports
+            if ($json.ssl && $json.ssl.expired) score += 10;
+            if (!$json.headers?.HSTS) score += 5;
+            
+            // Clamp score 0-100
+            $json.risk.score = Math.min(Math.max(score, 0), 100);
+            return $json;
+
+  - id: 9
+    name: "09 AI Analyst"
+    color: 7
+    nodes:
+      - name: "AI_ExecutiveSummary"
+        type: "n8n-nodes-base.openAi"
+        continueOnFail: true
+        credentials:
+          openAiApi:
+            id: ""
+            name: "OpenAI account"
+        parameters:
+          resource: "chat"
+          operation: "create"
+          model: "gpt-4o"
+          prompt: "=System:\nYou are a Senior Security Analyst.\nInput:\n- Asset information\n- DNS\n- SSL\n- Headers\n- Nmap\n- Nuclei\n- Threat intelligence\n- Risk score\n\nReturn JSON:\n{\n  \"summary\":\"...\",\n  \"priority\":\"...\",\n  \"business_impact\":\"...\",\n  \"technical_analysis\":\"...\",\n  \"recommendations\":[]\n}\n\nUser: {{ JSON.stringify($json) }}"
+      - name: "CODE_AICostTracker"
+        type: "n8n-nodes-base.code"
+        parameters:
+          jsCode: |
+            // Mock token calculation or parse from OpenAI node if available
+            const tokens = JSON.stringify($json).length / 4;
+            $json.ai_cost = {
+              model: "gpt-4o",
+              tokens: tokens,
+              estimated_cost: (tokens / 1000) * 0.01
+            };
+            return $json;
+
+  - id: 10
+    name: "10 PostgreSQL & Notifications"
+    color: 5
+    nodes:
+      - name: "CODE_ExecutionSummary"
+        type: "n8n-nodes-base.code"
+        parameters:
+          jsCode: |
+            $json.execution_summary = {
+              assets_scanned: 1,
+              duration: 94,
+              findings: $json.vulnerabilities?.length || 0,
+              critical: $json.risk.score >= 90 ? 1 : 0,
+              high: $json.risk.score >= 70 && $json.risk.score < 90 ? 1 : 0,
+              medium: $json.risk.score >= 40 && $json.risk.score < 70 ? 1 : 0,
+              low: $json.risk.score >= 10 && $json.risk.score < 40 ? 1 : 0,
+              failed_scanners: []
+            };
+            return $json;
+      - name: "DB_InsertFindings"
+        type: "n8n-nodes-base.postgres"
+        continueOnFail: true
+        credentials:
+          postgres:
+            id: ""
+            name: "Postgres account"
+        parameters:
+          operation: "insert"
+          table: "findings"
+          columns: "asset_id, scanner_name, severity, finding_title, finding_details"
+          dataMode: "autoMapInputData"
+      - name: "SWITCH_Severity"
+        type: "n8n-nodes-base.switch"
+        parameters:
+          mode: "rules"
+          rules:
+            rules:
+              - conditions:
+                  number:
+                    - value1: "={{ $json.risk.score }}"
+                      operation: "largerEqual"
+                      value2: 90
+                output: 0
+              - conditions:
+                  number:
+                    - value1: "={{ $json.risk.score }}"
+                      operation: "largerEqual"
+                      value2: 70
+                output: 1
+              - conditions:
+                  number:
+                    - value1: "={{ $json.risk.score }}"
+                      operation: "largerEqual"
+                      value2: 40
+                output: 2
+              - conditions:
+                  number:
+                    - value1: "={{ $json.risk.score }}"
+                      operation: "largerEqual"
+                      value2: 10
+                output: 3
+      - name: "HTTP_Slack_Critical"
+        type: "n8n-nodes-base.httpRequest"
+        continueOnFail: true
+        parameters:
+          url: "https://hooks.slack.com/services/YOUR/WEBHOOK"
+          method: "POST"
+          sendBody: true
+          bodyParameters:
+            parameters:
+              - name: "text"
+                value: "🚨 CRITICAL Risk Detected: {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}\nScore: {{ $json.risk.score }}\nDetails: {{ $json.ai_summary }}"

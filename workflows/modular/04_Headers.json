@@ -1,0 +1,66 @@
+{
+  "name": "04_Headers",
+  "nodes": [
+    {
+      "id": "f24a822a-8eab-40a2-b3ef-44a48371433b",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "id": "553e9710-40d3-434c-bae5-303edc95568f",
+      "name": "Run 04_Headers",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "id": "f4f2427b-b391-4b37-8719-bf2bf4b3507d",
+      "name": "Send to Normalizer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run 04_Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run 04_Headers": {
+      "main": [
+        [
+          {
+            "node": "Send to Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

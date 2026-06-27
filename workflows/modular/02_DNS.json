@@ -1,0 +1,66 @@
+{
+  "name": "02_DNS",
+  "nodes": [
+    {
+      "id": "f00c838d-8f10-4ff0-b5e1-cca8e3a468f2",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "id": "1e6b0e0f-ef58-4e61-96bd-776002acb0e1",
+      "name": "Run 02_DNS",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "id": "c6e307cd-67ce-45d2-a6b8-47b7fd44a2d8",
+      "name": "Send to Normalizer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run 02_DNS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run 02_DNS": {
+      "main": [
+        [
+          {
+            "node": "Send to Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

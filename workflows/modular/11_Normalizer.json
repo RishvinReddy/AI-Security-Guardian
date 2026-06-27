@@ -1,0 +1,100 @@
+{
+  "name": "11_Normalizer",
+  "nodes": [
+    {
+      "id": "a8f6df85-578a-44e9-9bc2-8afd64b36168",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "970530f0-e291-4e7a-8e61-245fdbf2a655",
+      "name": "Normalize Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\n// Takes dynamic input from collectors and standardizes it\nconst scanner = $json.scanner || 'unknown';\nconst asset_id = $json.asset_id;\nconst raw_data = $json.raw_data;\n\nreturn {\n  asset_id: asset_id,\n  scanner_name: scanner,\n  severity: $json.severity || 'info',\n  finding_title: `Finding from ${scanner}`,\n  finding_details: raw_data\n};\n"
+      }
+    },
+    {
+      "id": "83db018c-f6f2-4a60-ae67-e2de01c8a1c5",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "operation": "insert",
+        "table": "findings",
+        "columns": "asset_id, scanner_name, severity, finding_title, finding_details",
+        "dataMode": "autoMapInputData"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "112c4bcc-118e-448e-8b13-00a0768aa53b",
+      "name": "Trigger Risk Engine",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        600,
+        300
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Trigger Risk Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

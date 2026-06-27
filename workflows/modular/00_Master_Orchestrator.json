@@ -1,0 +1,228 @@
+{
+  "name": "00_Master_Orchestrator",
+  "nodes": [
+    {
+      "id": "0bbe95cd-493d-439b-a4ba-eead0e93656b",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "df11aed9-7f29-4c43-9dec-d2a60d707c00",
+      "name": "Get Assets",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, asset_value, asset_type FROM assets;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "4a3bf925-ba20-483a-bfa3-9934f96bbc89",
+      "name": "Loop Assets",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "batchSize": 1
+      }
+    },
+    {
+      "id": "11f01d28-2154-4f5f-9371-e122cc2950be",
+      "name": "01 Asset Discovery",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget",
+        "workflowInputs": "={{ $json }}"
+      }
+    },
+    {
+      "id": "7580cf5d-b7ba-4083-b38e-832e8c10e0cd",
+      "name": "02 DNS",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        600,
+        300
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget",
+        "workflowInputs": "={{ $json }}"
+      }
+    },
+    {
+      "id": "08e1a05e-4d70-4ab3-bc6b-6621c119ce57",
+      "name": "03 SSL",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        600,
+        400
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget",
+        "workflowInputs": "={{ $json }}"
+      }
+    },
+    {
+      "id": "b7ae43e7-79d3-4ce1-8e4b-43f4afea91dc",
+      "name": "04 Headers",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        600,
+        500
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget",
+        "workflowInputs": "={{ $json }}"
+      }
+    },
+    {
+      "id": "38397c19-c297-4fea-9f79-29c6580c9ca4",
+      "name": "05 Nmap",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        600,
+        600
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget",
+        "workflowInputs": "={{ $json }}"
+      }
+    },
+    {
+      "id": "2b5d414b-c1ed-4a67-aca2-c744938027db",
+      "name": "06 Nuclei",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        600,
+        700
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget",
+        "workflowInputs": "={{ $json }}"
+      }
+    },
+    {
+      "id": "d5b5c1b6-a1ad-4221-bc79-0004de7ab457",
+      "name": "08 GitHub Secrets",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        600,
+        800
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget",
+        "workflowInputs": "={{ $json }}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Get Assets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Assets": {
+      "main": [
+        [
+          {
+            "node": "Loop Assets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Assets": {
+      "main": [
+        [
+          {
+            "node": "01 Asset Discovery",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "02 DNS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "03 SSL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "04 Headers",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "05 Nmap",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "06 Nuclei",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "08 GitHub Secrets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

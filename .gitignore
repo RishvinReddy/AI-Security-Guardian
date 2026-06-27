@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# IDEs
+.idea/
+.vscode/
+
+# Ignore local execution logs and test reports
+reports/local_*.md
+reports/local_*.pdf
+*.log

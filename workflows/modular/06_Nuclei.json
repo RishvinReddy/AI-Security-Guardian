@@ -1,0 +1,66 @@
+{
+  "name": "06_Nuclei",
+  "nodes": [
+    {
+      "id": "347bea02-4bcf-48d4-a978-14e1e62625ac",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "id": "e0d9e89d-87d5-4978-b2dc-6d78fffeef76",
+      "name": "Run 06_Nuclei",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "id": "8b9071e9-2ffd-467c-9379-ba13eb8558c8",
+      "name": "Send to Normalizer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run 06_Nuclei",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run 06_Nuclei": {
+      "main": [
+        [
+          {
+            "node": "Send to Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "name": "05_Nmap",
+  "nodes": [
+    {
+      "id": "28c11668-ab7e-4742-b4d3-348bc76edd10",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "id": "13090730-6f6d-4198-a2f2-5c8bf65633c3",
+      "name": "Run 05_Nmap",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "id": "06010926-c6ff-4a58-a164-02e4662da295",
+      "name": "Send to Normalizer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "workflowId": "",
+        "mode": "fireAndForget"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run 05_Nmap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run 05_Nmap": {
+      "main": [
+        [
+          {
+            "node": "Send to Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
