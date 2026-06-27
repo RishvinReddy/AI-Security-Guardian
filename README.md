@@ -12,36 +12,43 @@
   [![OpenAI](https://img.shields.io/badge/AI%20Engine-GPT--4o-green.svg?style=flat-square&logo=openai)](https://openai.com/)
   [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-blue.svg?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
   [![Docker](https://img.shields.io/badge/Deployed-Docker-blue.svg?style=flat-square&logo=docker)](https://www.docker.com/)
-  [![Version](https://img.shields.io/badge/Release-v1.0.0-success.svg?style=flat-square)](#)
+  [![Version](https://img.shields.io/badge/Release-v3.0.0-success.svg?style=flat-square)](#)
   [![Maintainer](https://img.shields.io/badge/Maintainer-Rishvin%20Reddy-blueviolet?style=flat-square)](https://github.com/RishvinReddy)
 </div>
 
 ---
 
 ## ⚠️ Important Security Disclaimer
-> This automated workflow performs **active security testing** (including port scanning and vulnerability probing via Nmap, Nuclei, Trivy, etc.). 
+> [!WARNING]
+> This automated workflow performs **active security testing** (including port scanning and vulnerability probing). 
 > **You must ONLY run this software against domains, IP addresses, and assets that you own or are explicitly authorized to test.** Unauthorized scanning of third-party infrastructure is illegal and strictly prohibited. The maintainers assume no liability for misuse.
 
 ---
 
 ## 📖 Executive Overview
 
-**AI Security Guardian** is a highly scalable, autonomous security automation platform. It transforms standard vulnerability scanning into a continuous, intelligent pipeline. 
+**AI Security Guardian v3.0.0** represents a paradigm shift in security automation. Originally designed as a vulnerability scanning workflow, it has rapidly evolved into a complete, event-driven, autonomous Security Operations Center (SOC) platform.
 
-By unifying open-source security tools (Nmap, Nuclei, Subfinder) with a deterministic Risk Engine and an OpenAI-powered Security Analyst, this project automatically discovers assets, scans for vulnerabilities, normalizes the data into a centralized JSON object, calculates risk, and delivers actionable, severity-routed alerts.
+By unifying open-source security tooling (Nmap, Nuclei, Trivy, Prowler) with a strict API Gateway, dynamic Plugin Managers, and a deterministic Risk Engine, the platform ingests massive amounts of raw telemetry. It then leverages a multi-agent AI framework (powered by GPT-4o) to execute deep security investigations, routing normalized incidents out to enterprise SIEMs via an internal Event Bus.
 
-### 📊 Quick Stats
-- **150+** Workflow Nodes
-- **15** Logical Execution Sections
-- **20+** Supported Integrations (OpenAI, Slack, PostgreSQL, Nmap, etc.)
-- **6** Normalized Database Tables
+### 📊 Platform Statistics (v3.0.0)
+- **~700** Workflow Nodes
+- **18** Logical Execution Sub-Engines
+- **35** Normalized PostgreSQL Tables
+- **Multi-Agent AI** (Incident Commander, Threat Analyst, Compliance Analyst, Executive)
 - **100%** Open Source Architecture
+
+### 📸 Screenshots
+*(Coming soon)*
+- **SOC Dashboard**: `assets/soc-dashboard.png`
+- **AI Investigation Chat**: `assets/ai-investigation.png`
+- **SIEM Event Payload**: `assets/siem-payload.png`
 
 ---
 
-## 🏗️ High-Level System Architecture
+## 🏗️ Core Architecture (v3.0.0)
 
-The ecosystem relies on three primary pillars: **Orchestration** (n8n), **Execution** (Security Scanners), and **State Management** (PostgreSQL).
+The ecosystem is divided into 5 distinct architectural layers, ensuring maximum scalability, fault tolerance, and modularity.
 
 ```mermaid
 graph TD
@@ -50,174 +57,91 @@ graph TD
     classDef data fill:#27ae60,stroke:#ecf0f1,stroke-width:2px,color:#ecf0f1;
     classDef ai fill:#8e44ad,stroke:#ecf0f1,stroke-width:2px,color:#ecf0f1;
 
-    subgraph Orchestration Layer [n8n Mega Workflow]
-        A[CRON Trigger] --> B[Configuration Control Center]
-        B --> C{Parallel Dispatcher}
+    subgraph Layer 1: API & Platform
+        A[API Gateway / Webhook] --> B[RBAC Validator]
+        B --> C[Plugin Manager]
     end
 
-    subgraph Execution Layer [Active Scanners & APIs]
-        C --> D[Nmap / Nuclei]:::tools
-        C --> E[DNS / WHOIS]:::tools
-        C --> F[Threat Intel APIs]:::tools
+    subgraph Layer 2: Execution & Orchestration
+        C --> D[Trigger Router]
+        D --> E{Plugin Dispatcher}
     end
 
-    subgraph Normalization & AI Layer
-        D --> G{Data Normalizer}:::core
-        E --> G
-        F --> G
-        G --> H[Deterministic Risk Engine]:::core
-        H --> I[OpenAI GPT-4o Analyst]:::ai
+    subgraph Layer 3: Security Expansion & Correlation
+        E --> F[Asset Discovery / Network Scanners]:::tools
+        E --> G[IaC Manager / Cloud Scanners]:::tools
+        E --> T[Container Security]:::tools
+        F --> H{Deterministic Risk Engine}:::core
+        G --> H
+        T --> H
     end
 
-    subgraph State & Reporting
-        I --> J[(PostgreSQL DB)]:::data
-        J --> K[Severity-Based Routing]
-        K --> L((Slack / Email Alerts)):::core
+    subgraph Layer 4: Operations & Outbound
+        H --> I[Incident Management]
+        I --> J[Event Bus]
+        J --> K[SIEM Router]
+        J --> L[Integration Hub]
     end
 
-    class A,B,C,G,H,K core;
+    subgraph Layer 5: AI Intelligence & Observability
+        K --> M[AI Investigation Gateway]:::ai
+        M --> N[Compliance & Scorecards]
+        N --> O[Platform Health Monitor]
+    end
+
+    O --> P[(PostgreSQL Relational DB)]:::data
 ```
 
 ---
 
-## ⚙️ How It Works: Inputs, Processing, and Data Flow
+## ⚙️ Deep Dive: The 5 Layers of Security Orchestration
 
-The workflow is compiled as a **150+ node Mega-Workflow**. Below is the deep dive into exactly how data traverses the system.
+### Layer 1: Platform Foundation (API & RBAC)
+Unlike traditional n8n workflows that rely on cron triggers, AI Security Guardian exposes a native **API Gateway** (`/scan`, `/investigation`, `/dashboard`). 
+Every inbound request hits the **RBAC Validator**, cross-referencing the request token against the `roles` and `permissions` tables in PostgreSQL. If an Analyst requests a scan on a highly restricted production tenant without authorization, the workflow halts with a `401 Unauthorized`.
 
-### 1. Triggering & Inputs (How it Starts)
-The workflow is designed to be completely autonomous. It triggers in two ways:
-1. **CRON Scheduler**: Wakes up at a defined interval (e.g., daily at 2 AM).
-2. **Manual Execution**: Triggered via the n8n UI for ad-hoc assessments.
+### Layer 2: Plugin-Driven Execution
+Hardcoded scanners are obsolete. Layer 2 queries the `plugins` table in PostgreSQL to dynamically determine which tools to run. 
+If `Nuclei` is disabled in the DB, the **Plugin Manager** gracefully bypasses that branch at runtime, drastically improving performance and allowing instant toggle-ability via UI/API without modifying the workflow YAML.
 
-The first node it hits is the **`CFG_Configuration`** Control Center. This is where all dynamic variables are initialized and injected into the pipeline:
-```json
-{
-  "TARGET_DOMAIN": "example.com",
-  "SCAN_PROFILE": "Deep",
-  "ENABLE_NMAP": true,
-  "ENABLE_NUCLEI": true,
-  "TIMEOUT": 60
-}
-```
+### Layer 3: Security Expansion & Deterministic Risk
+The platform does not rely on AI to guess risk. 
+Data from Network Scanners, Container Audits (Trivy), Cloud Posture (Prowler), and IaC Manifests (Terraform/Helm) all funnel into a single **Data Normalizer**. This normalized schema is fed into the **Deterministic Risk Engine**, a math-based script that assigns hard multipliers. 
+> [!NOTE]
+> Example: An IaC finding for an `aws_security_group` exposing `0.0.0.0/0 on port 22` immediately inflates the baseline risk score by `+15` points before the infrastructure is even deployed.
 
-### 2. Parallel Processing (How we execute)
-Because security scans are time-consuming, the workflow uses n8n's asynchronous execution to fan out the workload. 
-The configuration variables are passed downstream simultaneously to all enabled Collector Nodes.
+### Layer 4: Operations & The Event Bus
+Once an incident is verified, it hits the **Event Bus**. The workflow injects tracking UUIDs (`correlation_id`, `tenant_id`) and fans out the payload. 
+The **Integration Hub** routes messages to Slack/Jira/ServiceNow, while the **SIEM Router** normalizes the exact same payload for Splunk, Elastic, and Microsoft Sentinel.
 
-```mermaid
-sequenceDiagram
-    participant Config as Control Center
-    participant Nmap as Network Scanner
-    participant Nuclei as Vuln Scanner
-    participant DNS as OSINT
-    participant Merge as Merge Gate
-
-    Config->>Nmap: Start port scan (target.com)
-    Config->>Nuclei: Start CVE scan (target.com)
-    Config->>DNS: Fetch WHOIS/A/MX records
-    
-    Note over Nmap,DNS: Scanners run concurrently
-    
-    DNS-->>Merge: Return JSON (Fast)
-    Nmap-->>Merge: Return XML -> JSON (Medium)
-    Nuclei-->>Merge: Return JSON (Slow)
-    
-    Note over Merge: Workflow halts until ALL branches complete.
-```
-
-### 3. The Normalization Engine (How we structure chaotic data)
-Raw outputs from security tools are notoriously messy. Nmap returns XML, Nuclei returns multi-line JSON objects, and WHOIS returns plain text.
-The **`CODE_StandardizeJSON`** node acts as a funnel. It intercepts all raw data, cleans it, and maps it to our strict Global Data Object schema.
-
-**The Global Data Object Structure:**
-```json
-{
-  "workflow_metadata": { "execution_id": "uuid-1234", "version": "1.0.0" },
-  "asset": { "domain": "example.com", "fingerprint": "example.com_1.1.1.1" },
-  "dns": { "records": [] },
-  "ports": [ { "port": 80, "state": "open" } ],
-  "vulnerabilities": [ { "id": "CVE-2024-XXXX", "severity": "high" } ],
-  "risk": { "score": null },
-  "execution": { "duration": 145, "scanners_failed": 0 }
-}
-```
-
-### 4. Deterministic Risk Engine (How we calculate danger)
-We **do not** let AI guess the risk score. AI is prone to hallucination. Instead, we use a deterministic math engine written in standard JavaScript.
-
-```mermaid
-flowchart LR
-    A[Vulnerabilities Found] -->|+40 points per Critical| D(Total Score)
-    B[Exposed RDP/SSH Ports] -->|+15 points per Port| D
-    C[Missing HTTP Headers] -->|+5 points per Header| D
-    
-    D --> E{"Math.min(Score, 100)"}
-    E --> F[Final Risk Score 0-100]
-```
-
-### 5. AI Security Analyst (How we synthesize)
-Once the math is done, the complete Global Data Object (including the deterministic Risk Score) is passed to **OpenAI (GPT-4o)**. 
-We utilize a strict System Prompt forcing the LLM to output a machine-readable JSON summary, rather than a conversational wall of text.
-
-**The AI Prompt:**
-> *You are a Senior Security Analyst. Analyze the provided DNS, Port, Vulnerability, and Risk Score data. Output a JSON object containing an `executive_summary`, `technical_analysis`, `business_impact`, and a prioritized array of `recommendations`.*
-
-### 6. Multi-Table Relational Logging (How we track history)
-Before any alerts are sent, all evidence is permanently preserved in PostgreSQL. We use a 6-table normalized schema, ensuring we can track metrics like MTTR (Mean Time to Remediate) over time.
-
-```mermaid
-erDiagram
-    ASSETS ||--o{ EXECUTIONS : "undergoes"
-    EXECUTIONS ||--o{ FINDINGS : "generates"
-    EXECUTIONS ||--o{ RAW_SCANNER_RESULTS : "logs"
-    EXECUTIONS ||--o{ AI_REPORTS : "synthesizes"
-
-    ASSETS {
-        UUID id PK
-        VARCHAR domain
-        VARCHAR fingerprint
-    }
-    EXECUTIONS {
-        UUID id PK
-        INT duration
-        TIMESTAMP start_time
-    }
-    FINDINGS {
-        UUID id PK
-        VARCHAR severity
-        VARCHAR cve_title
-    }
-    AI_REPORTS {
-        UUID id PK
-        TEXT business_impact
-        JSONB recommendations
-    }
-```
-
-### 7. Severity-Based Alerting (How we notify)
-To prevent "alert fatigue", the workflow uses a Switch Node to inspect the final Risk Score and route notifications appropriately.
-
-| Risk Score | Severity Level | Action Taken |
-| :--- | :--- | :--- |
-| **90 - 100** | CRITICAL | Instant Slack Message + Email + High-Priority DB Flag |
-| **70 - 89** | HIGH | Slack Message + Database Logging |
-| **40 - 69** | MEDIUM | Email Digest + Database Logging |
-| **10 - 39** | LOW | Database Logging Only (Dashboard visibility) |
-| **0 - 9** | INFORMATIONAL | Database Logging Only |
+### Layer 5: AI Intelligence & Observability
+**The AI Investigation Gateway** acts as the crown jewel. You can send a request to `/investigation` asking: *"Why is Incident #241 critical?"*
+1. **Context Builder**: Dips into PostgreSQL and pulls all historical findings, cloud posture, and related tickets.
+2. **Intent Detector**: Routes the prompt to one of four sub-agents: *Threat Analysis*, *Compliance Check*, *Executive Summary*, or *Incident Breakdown*.
+3. **Observability**: The workflow natively tracks AI token costs, API latency, and DB queue depths, generating internal `workflow_health_incidents` if degradation is detected.
 
 ---
 
-## 🛠️ Complete Feature Matrix
+## 🗄️ Database Schema: The Nervous System
 
-| Category | Capability | Status |
+The massive 35-table PostgreSQL schema is designed for multi-tenant, enterprise auditing. 
+
+| Logical Group | Key Tables | Purpose |
 | :--- | :--- | :--- |
-| **Reconnaissance** | DNS Mapping, WHOIS, Reverse DNS, Subfinder | ✅ Active |
-| **Attack Surface** | Nmap Port Scanning, SSL Expiry & Cipher Validation, HTTP Security Headers | ✅ Active |
-| **Vulnerability** | Nuclei Template Scanning, Trivy Image/FS Scanning | ✅ Active |
-| **Threat Intel** | VirusTotal IP Reputation, Shodan Exposure, EPSS Exploitation Probabilities | ✅ Active |
-| **AI Operations** | GPT-4o Executive Summarization, Technical Root Cause Analysis, Remediation Steps | ✅ Active |
-| **Orchestration** | Parallel Execution, `continueOnFail` fault tolerance, Error catch pipelines | ✅ Active |
-| **Data Storage** | PostgreSQL Relational schema, Raw JSONB evidence vaults | ✅ Active |
+| **Assets & CMDB** | `assets`, `executions`, `raw_scanner_results` | Tracks domains, owners, and raw execution logs. |
+| **Findings & Risk** | `findings`, `risk_scores`, `ai_reports` | Normalized security telemetry and calculated scores. |
+| **Expansion Layers** | `cloud_findings`, `container_findings`, `iac_findings` | Niche security domain data tracking. |
+| **Access Control** | `roles`, `users`, `permissions`, `api_keys` | Complete RBAC backend for the API Gateway. |
+| **Plugins** | `plugins`, `plugin_settings`, `plugin_logs` | Dynamic scanner configurations and credential vaults. |
+| **Operations** | `incidents`, `tickets`, `platform_events`, `ai_metrics` | Event bus routing, SIEM integration, and token auditing. |
+
+---
+
+## 🧪 Demo Data & Workflow Exports
+If you want to test the platform without running active scans, check the `examples/` folder. It contains:
+- `demo-config.json` - Safe, non-invasive scan configurations.
+- `mock_incidents.json` - Sample Risk Engine outputs for AI testing.
+- `sample_siem_payload.json` - What the Event Bus sends to Splunk/Sentinel.
 
 ---
 
@@ -228,8 +152,7 @@ Deploying the AI Security Guardian is completely containerized.
 ### 1. Requirements
 * Docker & Docker Compose
 * n8n Instance (Included in `docker-compose.yml`)
-* API Keys for OpenAI, VirusTotal (Optional)
-* Locally installed CLI tools (Nmap, Nuclei) if using local execution nodes.
+* API Keys for OpenAI
 
 ### 2. Quick Start
 ```bash
@@ -241,8 +164,6 @@ cd AI-Security-Guardian
 cp .env.example .env
 
 # Deploy the Infrastructure (n8n, Postgres, Redis)
-chmod +x scripts/install-tools.sh
-./scripts/install-tools.sh
 docker-compose up -d
 ```
 
@@ -250,7 +171,7 @@ docker-compose up -d
 1. Open n8n at `http://localhost:5678`
 2. Navigate to **Workflows > Import from File**
 3. Select `AI_Security_Guardian_Mega.json` from the repository root.
-4. Add your Credentials (OpenAI, PostgreSQL) in the n8n UI.
+4. Execute `node generator/seed_db.js` (Optional: Seeds DB plugins).
 5. Click **Execute Workflow**!
 
 ---
@@ -258,63 +179,35 @@ docker-compose up -d
 ## 📁 Repository Structure
 ```text
 ai-security-guardian/
-├── AI_Security_Guardian_Mega.json # The compiled master workflow
+├── AI_Security_Guardian_Mega.json # The compiled ~700 node platform
 ├── generator/                     # YAML-to-JSON compiler logic
 │   ├── workflow-spec.yaml         # Edit architecture here!
-│   └── build.py
+│   ├── build.py                   # Compiler script
+│   └── scripts/                   # Migration scripts
 ├── database/
-│   └── init.sql                   # 6-Table PostgreSQL schema
-├── scripts/                       # Deployment scripts
+│   └── init.sql                   # 35-Table PostgreSQL schema
 ├── docs/                          # Detailed architecture documentation
-├── examples/                      # Demo outputs & configs
-└── workflows/modular/             # Original individual tool logic
+│   └── configuration.md
+├── VALIDATION.md                  # Verification suite instructions
+└── CHANGELOG.md                   # Release notes
 ```
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Roadmap & Phase 5 (Enterprise SaaS)
 
-### Phase 1: Core Scanner & AI Analysis ✅ (v1.0.0)
-- [x] Massive 15-Section n8n Mega Workflow
-- [x] Deterministic Risk Engine + OpenAI JSON outputs
-- [x] PostgreSQL 6-Table Storage Schema
-- [x] YAML-based generator for architectural compilation
-
-### Phase 2: Intelligence & Trends 🚧 (In Progress - v1.1.0)
-- [ ] Historical Comparison (Detecting closed/new ports via SQL diffs)
-- [ ] Threat Intel Aggregation & Database Caching (`threat_intel_cache` table)
-- [ ] Executive Dashboards (Grafana / Metabase integration)
-
-### Phase 3: SOC Automation 📅 (Planned)
-- [ ] Jira / GitHub Issues Ticketing Automation based on findings
-- [ ] Cloud & Container Security Audits (Prowler / Trivy integration)
-- [ ] Automated Compliance Scoring (SOC2 / CIS Benchmarks)
-
----
-
-## ❓ FAQ
-
-**Do I need Docker to run this?**
-Yes, the easiest way to ensure n8n, Postgres, and the network scanners are configured properly is via the provided `docker-compose.yml`.
-
-**Does this work on Windows?**
-Yes, via Windows Subsystem for Linux (WSL2) with Docker Desktop installed.
-
-**Can I disable Nmap if it's too slow?**
-Absolutely. The `CFG_Configuration` node allows you to toggle `ENABLE_NMAP` or `ENABLE_NUCLEI` independently.
-
-**How do I add new scanners?**
-To add a new tool, modify `generator/workflow-spec.yaml` to include an `Execute Command` node for your tool, map its output in the Normalizer section, and re-run `build.py`.
-
-**Are OpenAI API keys strictly required?**
-No. If you toggle `ENABLE_AI` to false, the platform will skip the GPT-4o analysis and solely rely on the deterministic Risk Score and raw vulnerabilities for Slack/Database reporting.
+While Phase 4 finalized the core workflow node count, Phase 5 aims to convert the system into an Enterprise SaaS architecture:
+- **Module 1 (Multi-Tenant SaaS)**: Complete tenant isolation, user invitations, and billing hooks.
+- **Module 2 (Distributed Scanning)**: Remote regional agents executing scan queues to balance load.
+- **Module 3 (Attack Path Analysis)**: Correlating isolated findings into graph-based kill chains.
+- **Module 4 (Autonomous Response)**: Configurable responses like disabling exposed services or generating IaC PRs.
 
 ---
 
 ## 🤝 Contributing
 Contributions, issues, and feature requests are highly encouraged! 
 
-**IMPORTANT:** Because the `AI_Security_Guardian_Mega.json` is a massive 150+ node file, manual pull requests altering the JSON directly are nearly impossible to review. 
+**IMPORTANT:** Because the `AI_Security_Guardian_Mega.json` is a massive ~700 node file, manual pull requests altering the JSON directly are nearly impossible to review. 
 If you are modifying the workflow architecture, you **must** edit `generator/workflow-spec.yaml` and re-compile the JSON using `python3 generator/build.py`.
 
 Please review our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -2,8 +2,8 @@
   "name": "AI Security Guardian Mega Workflow",
   "nodes": [
     {
-      "id": "cdf2c520-5314-4458-ad93-37ca377eb7cd",
-      "name": "Sticky Note: 01 Trigger Layer",
+      "id": "32a18864-e88b-44c3-b92c-56bc73b67738",
+      "name": "Sticky Note: 01 API Gateway & RBAC",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -11,15 +11,15 @@
         0
       ],
       "parameters": {
-        "content": "## 01 Trigger Layer",
+        "content": "## 01 API Gateway & RBAC",
         "height": 800,
-        "width": 1000,
-        "color": 7
+        "width": 1200,
+        "color": 6
       }
     },
     {
-      "id": "f8d13632-73ef-43e4-a852-7cf2da2bb265",
-      "name": "Trigger_Webhook",
+      "id": "2e5f2ca9-500d-498c-b7aa-aed3c65a719a",
+      "name": "API_Scan",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
@@ -27,18 +27,120 @@
         0
       ],
       "parameters": {
+        "path": "api/v1/scan",
+        "httpMethod": "POST",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "075f5dad-23f4-4f50-819b-2932834217e7",
+      "name": "API_Investigation",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        150
+      ],
+      "parameters": {
+        "path": "api/v1/investigation",
+        "httpMethod": "POST",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "1544e7d0-6fbd-4b69-9251-814c937ddd06",
+      "name": "API_Dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "path": "api/v1/dashboard",
+        "httpMethod": "GET",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "87f0aee2-f0f8-4166-9610-5376a18fd42e",
+      "name": "API_Health",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        450
+      ],
+      "parameters": {
+        "path": "api/v1/health",
+        "httpMethod": "GET",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "52bd0a0e-4009-458e-8759-7ef69fe1498c",
+      "name": "CODE_RBAC_Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        200
+      ],
+      "parameters": {
+        "jsCode": "\n// Mock RBAC validation against postgres table\nconst authHeader = ($node.API_Scan || $node.API_Dashboard || $node.API_Health || $node.API_Investigation || {headers:{}})?.headers?.authorization;\nif (!authHeader) {\n    // In reality, this would throw an error to return 401\n    return { auth: { status: 'unauthorized', role: 'none' } };\n}\nreturn { auth: { status: 'authorized', role: 'Admin' } };\n"
+      }
+    },
+    {
+      "id": "b9f28ce5-30a9-45b8-8981-53ae4e56b8de",
+      "name": "CODE_API_Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "jsCode": "\n// Route to Trigger Layer if it's a scan, else handle response\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "7828c0b4-1c68-49a1-9da9-86e449a63c84",
+      "name": "Sticky Note: 02 Trigger Layer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        900
+      ],
+      "parameters": {
+        "content": "## 02 Trigger Layer",
+        "height": 800,
+        "width": 1000,
+        "color": 7
+      }
+    },
+    {
+      "id": "5b02e1bb-9a8c-41df-aa63-dcd7ce102ace",
+      "name": "Trigger_Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        900
+      ],
+      "parameters": {
         "path": "scan-trigger",
         "options": {}
       }
     },
     {
-      "id": "5162e24f-08e5-44aa-a82c-11b0e669ed18",
+      "id": "caae2279-1662-4030-8b55-6bb5521b8212",
       "name": "Trigger_GitHub",
       "type": "n8n-nodes-base.githubTrigger",
       "typeVersion": 1,
       "position": [
         0,
-        150
+        1050
       ],
       "parameters": {
         "events": [
@@ -47,13 +149,13 @@
       }
     },
     {
-      "id": "67889642-a444-44e2-8fa5-2654c4efda63",
+      "id": "051ed380-bffe-478f-aa18-212fae0b0997",
       "name": "Trigger_Schedule",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [
         0,
-        300
+        1200
       ],
       "parameters": {
         "triggerTimes": {
@@ -67,53 +169,53 @@
       }
     },
     {
-      "id": "ed12cb7c-c986-4b75-9f29-e4316d8358d6",
+      "id": "dfcd731b-a740-461c-a7ce-2a23b5ec2fe0",
       "name": "Trigger_Manual",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
         0,
-        450
+        1350
       ],
       "parameters": {}
     },
     {
-      "id": "77e8eb0e-c593-41ee-9dc3-77865837dd2f",
+      "id": "f344be40-9b73-4e29-93b8-20231c643ad6",
       "name": "CODE_TriggerRouter",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        200
+        1100
       ],
       "parameters": {
         "jsCode": "\nconst source = $node.Trigger_Webhook ? 'Webhook' : \n               $node.Trigger_GitHub ? 'GitHub' : \n               $node.Trigger_Schedule ? 'Schedule' : 'Manual';\n               \nreturn {\n    trigger: {\n        source: source,\n        timestamp: new Date().toISOString(),\n        initiated_by: 'system'\n    }\n};\n"
       }
     },
     {
-      "id": "08c46df3-6a50-4502-bc79-c14a3cfdb0b3",
-      "name": "Sticky Note: 02 Configuration",
+      "id": "59b834d8-ae35-436d-8c97-c2bceb558a2f",
+      "name": "Sticky Note: 03 Configuration",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        900
+        1800
       ],
       "parameters": {
-        "content": "## 02 Configuration",
+        "content": "## 03 Configuration",
         "height": 400,
         "width": 1000,
         "color": 6
       }
     },
     {
-      "id": "36559996-ca92-4d62-94c6-7958c67c893f",
+      "id": "f3968e55-e4fa-4257-9216-28b14bc2b095",
       "name": "CRON_Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
       "position": [
         50,
-        1000
+        1900
       ],
       "parameters": {
         "rule": {
@@ -127,13 +229,13 @@
       }
     },
     {
-      "id": "131cd1ce-61c1-43da-b3b8-abd0a510a0e4",
+      "id": "635202ae-85aa-4602-95b3-d6f3dc715db9",
       "name": "CFG_Configuration",
       "type": "n8n-nodes-base.set",
       "typeVersion": 1,
       "position": [
         250,
-        1000
+        1900
       ],
       "parameters": {
         "values": {
@@ -247,42 +349,42 @@
       }
     },
     {
-      "id": "2de43d31-a892-49f8-b6e3-92c0a6f2e180",
-      "name": "MERGE_2",
+      "id": "b6eefe52-11fe-4b3e-b19a-781157e4a4a3",
+      "name": "MERGE_3",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         850,
-        1050
+        1950
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "5440699c-93f5-4091-9a5d-fb2cb01ae732",
-      "name": "Sticky Note: 03 Asset Inventory",
+      "id": "b0bed4a9-d1fd-4b13-ab3e-c1a3b2a8b8ab",
+      "name": "Sticky Note: 04 Asset Inventory",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        1400
+        2300
       ],
       "parameters": {
-        "content": "## 03 Asset Inventory",
+        "content": "## 04 Asset Inventory",
         "height": 800,
         "width": 1000,
         "color": 2
       }
     },
     {
-      "id": "5e7dbf35-4801-4671-95e1-220440188922",
+      "id": "dc2b2bc7-c133-4edb-b149-f0470151a7a0",
       "name": "DB_LoadAssetCMDB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         0,
-        1600
+        2500
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -297,42 +399,92 @@
       }
     },
     {
-      "id": "3db774fe-8144-4aad-9576-00a1c9a70d5a",
+      "id": "cf51d376-2532-42e7-8691-8e1b75999f73",
       "name": "CODE_AttachAssetContext",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        1600
+        2500
       ],
       "parameters": {
         "jsCode": "\n// Merge the trigger data, config data, and CMDB data into the global payload\nconst config = $items(\"CFG_Configuration\")[0].json;\nconst cmdb = $json || { domain: config.TARGET_DOMAIN, environment: 'Unknown', criticality: 'Medium' };\n\nreturn {\n    ...config,\n    asset_context: cmdb\n};\n"
       }
     },
     {
-      "id": "0653e775-55b4-4c37-ab1a-81572716c8c8",
-      "name": "Sticky Note: 04 Asset Discovery",
+      "id": "49afecda-03ea-4c9f-a190-20a0bc44f33a",
+      "name": "Sticky Note: 05 Plugin Manager",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        2300
+        3200
       ],
       "parameters": {
-        "content": "## 04 Asset Discovery",
+        "content": "## 05 Plugin Manager",
+        "height": 800,
+        "width": 1000,
+        "color": 2
+      }
+    },
+    {
+      "id": "5eac9045-0596-4e82-93dc-6c7d225df9f4",
+      "name": "DB_LoadPlugins",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        0,
+        3400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM plugins WHERE enabled = true ORDER BY priority ASC"
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "b32fe325-cab0-45a7-ba1d-954d1fd92f0a",
+      "name": "CODE_PluginRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        3400
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nconst activePlugins = $input.all().map(i => i.json);\nglobalJson.plugins_enabled = activePlugins.map(p => p.name);\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "287dbcde-32c5-46c4-9319-22e0e12417a9",
+      "name": "Sticky Note: 06 Asset Discovery",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        4100
+      ],
+      "parameters": {
+        "content": "## 06 Asset Discovery",
         "height": 400,
         "width": 1000,
         "color": 1
       }
     },
     {
-      "id": "9622b831-1bf6-4ead-8e18-f982941e6749",
+      "id": "1d5585c3-8b25-4239-b47d-8a964a0284f7",
       "name": "HTTP_Subfinder",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         50,
-        2400
+        4200
       ],
       "parameters": {
         "url": "https://api.subfinder.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
@@ -340,13 +492,13 @@
       "continueOnFail": true
     },
     {
-      "id": "783d674f-c698-4ef0-8e77-45484d041f13",
+      "id": "2f5b74a8-fc29-4e6d-81d9-07c36f0dce6d",
       "name": "HTTP_WHOIS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         250,
-        2400
+        4200
       ],
       "parameters": {
         "url": "https://api.whois.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
@@ -354,42 +506,42 @@
       "continueOnFail": true
     },
     {
-      "id": "fe3ce928-4743-4a83-8419-f024da05c71f",
-      "name": "MERGE_4",
+      "id": "c7cfda72-fbbf-49cb-a09e-33ad8b2ddad9",
+      "name": "MERGE_6",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         850,
-        2450
+        4250
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "48df4260-d687-4f1e-bfcb-112770c2d443",
-      "name": "Sticky Note: 05 DNS",
+      "id": "b0bf17f6-afe0-46a2-bc66-36cbd4312037",
+      "name": "Sticky Note: 07 DNS",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        2800
+        4600
       ],
       "parameters": {
-        "content": "## 05 DNS",
+        "content": "## 07 DNS",
         "height": 400,
         "width": 1000,
         "color": 1
       }
     },
     {
-      "id": "e3f6e94c-3d56-4367-abc2-08e17e10b078",
+      "id": "0d22e346-8d56-4fe6-88c3-cfcaa4e975e5",
       "name": "HTTP_CloudflareDNS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         50,
-        2900
+        4700
       ],
       "parameters": {
         "url": "https://cloudflare-dns.com/dns-query?name={{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}&type=A",
@@ -406,54 +558,54 @@
       "continueOnFail": true
     },
     {
-      "id": "7a464e1e-3c75-41c5-bc6c-8403a099a366",
+      "id": "e7ff39db-48b6-4ecc-afc4-3e7f43764624",
       "name": "HTTP_ReverseDNS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         250,
-        2900
+        4700
       ],
       "parameters": {},
       "continueOnFail": true
     },
     {
-      "id": "ac31436f-6b66-401d-890b-56b26dab30aa",
-      "name": "MERGE_5",
+      "id": "448b47b9-d467-47e4-a9a9-b008b5e968b2",
+      "name": "MERGE_7",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         850,
-        2950
+        4750
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "37a91a8e-1773-40df-83f7-19924f8d493e",
-      "name": "Sticky Note: 06 Attack Surface",
+      "id": "336e4fc1-f7f8-4e21-9bdd-033ee3f5422f",
+      "name": "Sticky Note: 08 Attack Surface",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        3300
+        5100
       ],
       "parameters": {
-        "content": "## 06 Attack Surface",
+        "content": "## 08 Attack Surface",
         "height": 400,
         "width": 1000,
         "color": 2
       }
     },
     {
-      "id": "876f51cc-c766-44d8-9a89-fdadf4093b5c",
+      "id": "2843b031-f4a8-478b-a037-a2e140054d23",
       "name": "CMD_Nmap",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         50,
-        3400
+        5200
       ],
       "parameters": {
         "command": "nmap -Pn -F {{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -oX -"
@@ -461,13 +613,13 @@
       "continueOnFail": true
     },
     {
-      "id": "d9d0d4f6-db4b-4629-a7d2-ca6696e6c0db",
+      "id": "c4ed5ad2-d9b0-47d3-ad86-7faa92d69294",
       "name": "HTTP_SSL",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         250,
-        3400
+        5200
       ],
       "parameters": {
         "url": "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}",
@@ -479,13 +631,13 @@
       "continueOnFail": true
     },
     {
-      "id": "3aba39de-e22e-4676-aee5-66583f4d03a0",
+      "id": "99dae5d3-b785-4a4d-a0e1-300d22425d4a",
       "name": "HTTP_Headers",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         450,
-        3400
+        5200
       ],
       "parameters": {
         "url": "https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}"
@@ -493,42 +645,42 @@
       "continueOnFail": true
     },
     {
-      "id": "28c4cd71-ff02-416d-b244-fe3cd85b7b08",
-      "name": "MERGE_6",
+      "id": "07497bdc-59db-4bee-b934-3249b4fb4d78",
+      "name": "MERGE_8",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         850,
-        3450
+        5250
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "c87b1254-63be-4467-9b9a-4da1bf4edded",
-      "name": "Sticky Note: 07 Vulnerability Scanning",
+      "id": "b912e32b-5bd3-4337-8705-21efacc08013",
+      "name": "Sticky Note: 09 Vulnerability Scanning",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        3800
+        5600
       ],
       "parameters": {
-        "content": "## 07 Vulnerability Scanning",
+        "content": "## 09 Vulnerability Scanning",
         "height": 400,
         "width": 1000,
         "color": 3
       }
     },
     {
-      "id": "c5b6a75a-69c1-4aec-9b09-f4f9e4a46e49",
+      "id": "f7a5e132-1084-4b0e-a0f2-9320786ad334",
       "name": "CMD_Nuclei",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         50,
-        3900
+        5700
       ],
       "parameters": {
         "command": "nuclei -u https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }} -json"
@@ -536,183 +688,45 @@
       "continueOnFail": true
     },
     {
-      "id": "75b87c5f-e63b-4999-87b8-40ec1a099f38",
+      "id": "49a558f6-ba9b-4def-9928-7ee4ed815f1e",
       "name": "CMD_Trivy",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         250,
-        3900
+        5700
       ],
       "parameters": {},
       "continueOnFail": true
     },
     {
-      "id": "97aac66a-bf38-4727-b9d0-14da4031ff84",
+      "id": "1c493e7a-daa8-4cc5-a7e6-c1229e20c5b3",
       "name": "CMD_ZAP_Passive",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         450,
-        3900
+        5700
       ],
       "parameters": {},
       "continueOnFail": true
     },
     {
-      "id": "5e044a21-1784-4cfe-bd01-dfb4637c4972",
-      "name": "MERGE_7",
+      "id": "43fc5a58-9d46-4171-b6d3-3799101ba78a",
+      "name": "MERGE_9",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         850,
-        3950
+        5750
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "9daf85d1-cfa3-4d56-81a0-520bc85a3048",
-      "name": "Sticky Note: 08 Cloud Security",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        0,
-        4300
-      ],
-      "parameters": {
-        "content": "## 08 Cloud Security",
-        "height": 800,
-        "width": 1000,
-        "color": 3
-      }
-    },
-    {
-      "id": "875568eb-4a0e-42d2-8011-91c431687171",
-      "name": "Cloud_AWS_Prowler",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        0,
-        4300
-      ],
-      "parameters": {
-        "command": "echo 'Mock AWS Prowler scan' && cat examples/mock_prowler.json || echo '{}'"
-      }
-    },
-    {
-      "id": "67984579-caac-450d-9777-615bb2b82e44",
-      "name": "Cloud_Azure_API",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        0,
-        4450
-      ],
-      "parameters": {
-        "url": "https://management.azure.com/mock",
-        "method": "GET"
-      }
-    },
-    {
-      "id": "94817dc3-2782-4186-9542-3860e8881df7",
-      "name": "Cloud_GCP_API",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [
-        0,
-        4600
-      ],
-      "parameters": {
-        "url": "https://mock.googleapis.com",
-        "method": "GET"
-      }
-    },
-    {
-      "id": "f24a8f26-7d3e-4a1d-a7e3-c351c11a4d56",
-      "name": "CODE_CloudNormalizer",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        400,
-        4450
-      ],
-      "parameters": {
-        "jsCode": "\n// Mock normalization\nconst globalJson = $items(\"CFG_Configuration\")[0].json;\nglobalJson.cloud_findings = [\n    { provider: 'aws', resource_type: 's3', resource_id: 'bucket-1', risk: 'high' }\n];\nreturn globalJson;\n"
-      }
-    },
-    {
-      "id": "f53e8e80-53a3-45ca-935b-ab601b52c153",
-      "name": "Sticky Note: 09 Container Security",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        0,
-        5200
-      ],
-      "parameters": {
-        "content": "## 09 Container Security",
-        "height": 800,
-        "width": 1000,
-        "color": 4
-      }
-    },
-    {
-      "id": "82979449-fcef-4070-a94e-6e92634bad98",
-      "name": "Container_Trivy_FS",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        0,
-        5200
-      ],
-      "parameters": {
-        "command": "echo 'Mock Trivy FS scan'"
-      }
-    },
-    {
-      "id": "2545af13-f208-47e4-8541-acb2ddc8dadb",
-      "name": "Container_Trivy_Image",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        0,
-        5350
-      ],
-      "parameters": {
-        "command": "echo 'Mock Trivy Image scan'"
-      }
-    },
-    {
-      "id": "d13d1fb9-0ed6-4a7f-b970-db289f5e335f",
-      "name": "Container_Trivy_SBOM",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        0,
-        5500
-      ],
-      "parameters": {
-        "command": "echo 'Mock Trivy SBOM'"
-      }
-    },
-    {
-      "id": "e2b72e52-1ed2-4741-ab50-5b9518caf0dd",
-      "name": "CODE_ContainerNormalizer",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        400,
-        5350
-      ],
-      "parameters": {
-        "jsCode": "\n// Mock normalization\nconst globalJson = $items(\"CODE_CloudNormalizer\")[0].json;\nglobalJson.container_findings = [\n    { image_name: 'nginx:latest', vulnerabilities: 5, secrets: 1 }\n];\nreturn globalJson;\n"
-      }
-    },
-    {
-      "id": "ef03d372-8765-47b8-a5ab-7918cc01ce82",
-      "name": "Sticky Note: 10 Normalizer",
+      "id": "7a5dda28-9012-4bcd-8e28-ac3b5460885d",
+      "name": "Sticky Note: 10 Cloud Security",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -720,49 +734,255 @@
         6100
       ],
       "parameters": {
-        "content": "## 10 Normalizer",
+        "content": "## 10 Cloud Security",
+        "height": 800,
+        "width": 1000,
+        "color": 3
+      }
+    },
+    {
+      "id": "e6c415fe-2c24-4aa8-9f08-476387ad8081",
+      "name": "Cloud_AWS_Prowler",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        6100
+      ],
+      "parameters": {
+        "command": "echo 'Mock AWS Prowler scan' && cat examples/mock_prowler.json || echo '{}'"
+      }
+    },
+    {
+      "id": "ac8e89b4-b108-4c94-9046-78b54727c08b",
+      "name": "Cloud_Azure_API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        0,
+        6250
+      ],
+      "parameters": {
+        "url": "https://management.azure.com/mock",
+        "method": "GET"
+      }
+    },
+    {
+      "id": "24ba0b0d-8177-4836-a990-758bcb916d5a",
+      "name": "Cloud_GCP_API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        0,
+        6400
+      ],
+      "parameters": {
+        "url": "https://mock.googleapis.com",
+        "method": "GET"
+      }
+    },
+    {
+      "id": "cb076665-f421-4f22-b31a-d559c490957d",
+      "name": "CODE_CloudNormalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        6250
+      ],
+      "parameters": {
+        "jsCode": "\n// Mock normalization\nconst globalJson = $items(\"CFG_Configuration\")[0].json;\nglobalJson.cloud_findings = [\n    { provider: 'aws', resource_type: 's3', resource_id: 'bucket-1', risk: 'high' }\n];\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "34f12c05-1094-4f4b-b91c-e5660c8a66bf",
+      "name": "Sticky Note: 11 Container Security",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7000
+      ],
+      "parameters": {
+        "content": "## 11 Container Security",
+        "height": 800,
+        "width": 1000,
+        "color": 4
+      }
+    },
+    {
+      "id": "b8ae67f3-3e6f-4c08-bf33-41319fa5d0f2",
+      "name": "Container_Trivy_FS",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7000
+      ],
+      "parameters": {
+        "command": "echo 'Mock Trivy FS scan'"
+      }
+    },
+    {
+      "id": "093a2147-86db-45a3-b616-1b9a118eae3e",
+      "name": "Container_Trivy_Image",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7150
+      ],
+      "parameters": {
+        "command": "echo 'Mock Trivy Image scan'"
+      }
+    },
+    {
+      "id": "3378b297-cd04-4b2c-b142-b55b438ec5e3",
+      "name": "Container_Trivy_SBOM",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7300
+      ],
+      "parameters": {
+        "command": "echo 'Mock Trivy SBOM'"
+      }
+    },
+    {
+      "id": "63f6b9ea-eee2-4a9f-8822-226f08e6f7ba",
+      "name": "CODE_ContainerNormalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        7150
+      ],
+      "parameters": {
+        "jsCode": "\n// Mock normalization\nconst globalJson = $items(\"CODE_CloudNormalizer\")[0].json;\nglobalJson.container_findings = [\n    { image_name: 'nginx:latest', vulnerabilities: 5, secrets: 1 }\n];\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "df721d9c-988c-4131-af60-4532176d95cd",
+      "name": "Sticky Note: 12 IaC Manager",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7900
+      ],
+      "parameters": {
+        "content": "## 12 IaC Manager",
+        "height": 800,
+        "width": 1000,
+        "color": 5
+      }
+    },
+    {
+      "id": "99bb4eb6-17d5-49f2-90cb-e5063c1ce17a",
+      "name": "IaC_Terraform",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        7900
+      ],
+      "parameters": {
+        "command": "echo 'Terraform Scan'"
+      }
+    },
+    {
+      "id": "3ea78b9f-8a14-4e70-b725-87068cd6c747",
+      "name": "IaC_Kubernetes",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        8050
+      ],
+      "parameters": {
+        "command": "echo 'K8s Scan'"
+      }
+    },
+    {
+      "id": "854f381d-7178-4b4a-b23f-bd225a800781",
+      "name": "IaC_Helm",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        8200
+      ],
+      "parameters": {
+        "command": "echo 'Helm Scan'"
+      }
+    },
+    {
+      "id": "c2ee2005-99a6-4d5b-b75f-152716d86fd5",
+      "name": "CODE_IaCNormalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        8050
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.iac = {\n    framework: \"Terraform\",\n    resource_type: \"aws_security_group\",\n    resource_name: \"prod-web-sg\",\n    misconfiguration: \"0.0.0.0/0 on port 22\",\n    severity: \"Critical\"\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "06efb4a7-462b-42cc-9ba6-07be83919fb8",
+      "name": "Sticky Note: 13 Normalizer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        8800
+      ],
+      "parameters": {
+        "content": "## 13 Normalizer",
         "height": 400,
         "width": 1000,
         "color": 6
       }
     },
     {
-      "id": "6f40c860-fe72-4aac-8085-0d8dfa8a2e80",
+      "id": "58118041-2c28-4861-9105-4f1b649b4d51",
       "name": "CODE_StandardizeJSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         50,
-        6200
+        8900
       ],
       "parameters": {
         "jsCode": "return {\n  workflow_metadata: {\n    schema_version: \"2.0\",\n    workflow_version: \"1.1.0\",\n    build: \"2026.06.27\",\n    workflow: \"AI Security Guardian\",\n    phase: 2,\n    execution_id: $execution.id\n  },\n  asset: {\n    domain: $('CFG_Configuration').item.json.TARGET_DOMAIN,\n    fingerprint: $('CFG_Configuration').item.json.TARGET_DOMAIN + \"_\" + ($items(\"HTTP_CloudflareDNS\")[0]?.json?.Answer?.[0]?.data || \"noip\")\n  },\n  evidence: {\n    nmap: $items(\"CMD_Nmap\")[0]?.json || {},\n    nuclei: $items(\"CMD_Nuclei\")[0]?.json || {},\n    ssl: $items(\"HTTP_SSL\")[0]?.json || {},\n    headers: $items(\"HTTP_Headers\")[0]?.json || {},\n    dns: $items(\"HTTP_CloudflareDNS\")[0]?.json || {}\n  },\n  dns: $items(\"HTTP_CloudflareDNS\")[0]?.json || {},\n  ssl: $items(\"HTTP_SSL\")[0]?.json || {},\n  headers: $items(\"HTTP_Headers\")[0]?.json || {},\n  ports: ($items(\"CMD_Nmap\")[0]?.json || []).map(p => ({ port: p, confidence: 0.98 })),\n  vulnerabilities: ($items(\"CMD_Nuclei\")[0]?.json || []).map(v => ({ ...v, confidence: 0.95 })),\n  threat_intelligence: {},\n  historical: {},\n  risk: {},\n  trend: {},\n  ai: {},\n  reports: {},\n  execution: {\n    timestamp: new Date().toISOString(),\n    scanner_versions: {\n      nmap: \"7.97\",\n      nuclei: \"3.4.0\",\n      trivy: \"0.64\",\n      httpx: \"1.7\"\n    },\n    scanners: {\n      nmap: { success: !!$items(\"CMD_Nmap\")[0], duration: 0 },\n      nuclei: { success: !!$items(\"CMD_Nuclei\")[0], duration: 0 }\n    }\n  }\n};\n"
       }
     },
     {
-      "id": "824eafaf-607d-41d4-943e-3cc145888c20",
-      "name": "Sticky Note: 11 Historical Comparison",
+      "id": "b31aae21-95fb-48f4-80e4-a122315c8e8b",
+      "name": "Sticky Note: 14 Historical Comparison",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        6600
+        9300
       ],
       "parameters": {
-        "content": "## 11 Historical Comparison",
+        "content": "## 14 Historical Comparison",
         "height": 400,
         "width": 1000,
         "color": 5
       }
     },
     {
-      "id": "18619126-f00b-4d25-ba29-a884d26d611a",
+      "id": "9e6a39e6-5a2d-43de-89de-efd40a0313e3",
       "name": "DB_GetPreviousScan",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         50,
-        6700
+        9400
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -777,110 +997,110 @@
       }
     },
     {
-      "id": "887d37be-8489-44bf-9a82-9c6a83d74748",
+      "id": "03fd74f9-9f43-4e35-83c0-6a5418fe8c9c",
       "name": "CODE_CalculateDelta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         250,
-        6700
+        9400
       ],
       "parameters": {
         "jsCode": "const previousScore = $items(\"DB_GetPreviousScan\")[0]?.json?.previous_risk_score || null;\n\n$json = $items(\"CODE_StandardizeJSON\")[0].json;\n$json.historical = {\n  previous_risk: previousScore,\n  is_first_scan: previousScore === null,\n  new_ports: [], \n  closed_ports: [],\n  new_cves: [],\n  resolved_cves: []\n};\nreturn $json;\n"
       }
     },
     {
-      "id": "1ac2775d-f804-469e-a2e2-66d88d00d23b",
-      "name": "MERGE_11",
+      "id": "77902cca-7279-4c8b-9bf0-a73e921ddeb5",
+      "name": "MERGE_14",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         850,
-        6750
+        9450
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "dce40a8e-0235-4c95-b07b-86e8bb869c5c",
-      "name": "Sticky Note: 12 Change Detection Engine",
+      "id": "4439824e-2990-4b09-b838-1b9e8fea66b9",
+      "name": "Sticky Note: 15 Change Detection Engine",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        7100
+        9800
       ],
       "parameters": {
-        "content": "## 12 Change Detection Engine",
+        "content": "## 15 Change Detection Engine",
         "height": 800,
         "width": 1000,
         "color": 1
       }
     },
     {
-      "id": "b5d6b61d-fe0c-4f0e-b09d-e3662dfc56d9",
+      "id": "df5199a9-0aba-4156-a433-05fce8ad4c1e",
       "name": "CODE_ChangeClassifier",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         0,
-        7300
+        10000
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nconst deltas = globalJson.historical;\nconst changes = [];\n\nif (deltas && deltas.new_ports && deltas.new_ports.length > 0) {\n    changes.push({ type: 'NEW_EXPOSURE', severity: 'HIGH', confidence: 0.98 });\n}\nif (deltas && deltas.new_cves && deltas.new_cves.length > 0) {\n    changes.push({ type: 'SECURITY_REGRESSION', severity: 'CRITICAL', confidence: 0.95 });\n}\nif (deltas && deltas.resolved_cves && deltas.resolved_cves.length > 0) {\n    changes.push({ type: 'REMEDIATION_CONFIRMED', severity: 'LOW', confidence: 0.99 });\n}\n\nglobalJson.changes = changes;\nreturn globalJson;\n"
       }
     },
     {
-      "id": "12b3b8c2-79af-4038-8415-92cee860968d",
+      "id": "018e5092-c485-459e-9118-9ea5071a3ef8",
       "name": "CODE_ChangePriority",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         300,
-        7300
+        10000
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nconst assetContext = globalJson.asset_context || { criticality: 'Medium' };\n\nglobalJson.changes.forEach(change => {\n    change.business_impact = assetContext.criticality;\n});\n\nreturn globalJson;\n"
       }
     },
     {
-      "id": "107fdc76-75f0-4ee8-aa2c-1dfcc6d2ff6a",
-      "name": "Sticky Note: 13 Threat Intelligence Cache",
+      "id": "d58fee14-77e1-452f-9757-beec48e565aa",
+      "name": "Sticky Note: 16 Threat Intelligence Cache",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        8000
+        10700
       ],
       "parameters": {
-        "content": "## 13 Threat Intelligence Cache",
+        "content": "## 16 Threat Intelligence Cache",
         "height": 800,
         "width": 14600,
         "color": 4
       }
     },
     {
-      "id": "09014023-b9a9-48bb-8947-55af480fd382",
+      "id": "9e0407f1-2700-4ec3-9e4d-b44dc36c4ef4",
       "name": "CODE_ExtractFindings",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         0,
-        8000
+        10700
       ],
       "parameters": {
         "jsCode": "return $json.vulnerabilities || [];"
       }
     },
     {
-      "id": "897183c0-16f0-49ec-9031-3513c58a7ebb",
+      "id": "8ba287ac-45f3-4661-9b82-aab30ff8768d",
       "name": "IF_NVD",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         300,
-        7400
+        10100
       ],
       "parameters": {
         "conditions": {
@@ -894,13 +1114,13 @@
       }
     },
     {
-      "id": "6168121d-d0c4-4388-bca4-7c709c18111f",
+      "id": "9ce18957-0555-4ead-9706-9a0d5ed040b3",
       "name": "DB_CacheLookup_NVD",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         600,
-        7350
+        10050
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -915,13 +1135,13 @@
       }
     },
     {
-      "id": "a88ae815-b33b-435c-9efd-64b1a3178205",
+      "id": "bf554e18-0420-48fa-902a-710c9ffd1bab",
       "name": "IF_CacheValid_NVD",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         900,
-        7350
+        10050
       ],
       "parameters": {
         "conditions": {
@@ -935,13 +1155,13 @@
       }
     },
     {
-      "id": "d0507066-a5c4-4637-9ace-2119d8f56bbc",
+      "id": "1fe658ad-6251-42e8-ad3e-9b92bc3d9d05",
       "name": "HTTP_NVD",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        7400
+        10100
       ],
       "parameters": {
         "url": "https://api.example.com/nvd",
@@ -950,13 +1170,13 @@
       "continueOnFail": true
     },
     {
-      "id": "b721ac96-d494-43cf-8677-8e4dea3512bb",
+      "id": "5c7a158f-0666-4137-b1f7-7f53282142d9",
       "name": "IF_ApiSuccess_NVD",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1500,
-        7400
+        10100
       ],
       "parameters": {
         "conditions": {
@@ -970,13 +1190,13 @@
       }
     },
     {
-      "id": "741854fd-27c5-4961-84c7-353c95ca4d06",
+      "id": "2318bf08-c84a-45f7-b8c5-73bf771be5c2",
       "name": "DB_SaveCache_NVD",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1800,
-        7350
+        10050
       ],
       "parameters": {
         "operation": "insert",
@@ -993,13 +1213,13 @@
       }
     },
     {
-      "id": "c7d24596-27d8-4755-9933-4b04a0925e68",
+      "id": "54a2e613-71f2-45c7-97c2-d9f99ba250bf",
       "name": "IF_HasStaleCache_NVD",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1800,
-        7450
+        10150
       ],
       "parameters": {
         "conditions": {
@@ -1013,52 +1233,52 @@
       }
     },
     {
-      "id": "9b5cba83-581b-443e-aecb-3eff2934226b",
+      "id": "9a483b41-a108-4233-95c0-51b29f31c921",
       "name": "RETURN_CACHE_NVD",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        7250
+        9950
       ],
       "parameters": {
         "jsCode": "return { provider: 'NVD', source: 'cache', data: $json };"
       }
     },
     {
-      "id": "f410a7fa-c312-4cb9-b3cf-e7b700c08d66",
+      "id": "87c35585-c481-4bee-ba0a-2dfa8c8ef3e9",
       "name": "RETURN_STALE_NVD",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        7400
+        10100
       ],
       "parameters": {
         "jsCode": "return { provider: 'NVD', source: 'stale_cache', data: $items('DB_CacheLookup_NVD')[0].json };"
       }
     },
     {
-      "id": "d94c890b-290e-4953-bb3f-6402bb4d8dcc",
+      "id": "7b88353d-45fb-40ba-8412-bec75b7ba8bc",
       "name": "SKIP_NVD",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        7500
+        10200
       ],
       "parameters": {
         "jsCode": "return { provider: 'NVD', skipped: true };"
       }
     },
     {
-      "id": "4ffa783e-2e36-4469-a4b5-3b40bb582206",
+      "id": "be10440d-f1ee-406a-b91d-eaaa80a09135",
       "name": "IF_EPSS",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         300,
-        7750
+        10450
       ],
       "parameters": {
         "conditions": {
@@ -1072,13 +1292,13 @@
       }
     },
     {
-      "id": "5b61f4e3-00de-4bfb-98c1-e315a5bbc38b",
+      "id": "0742e1c1-aa2f-49b6-87af-d8afdc7c4576",
       "name": "DB_CacheLookup_EPSS",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         600,
-        7700
+        10400
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -1093,13 +1313,13 @@
       }
     },
     {
-      "id": "ecd3ce23-5927-4d4e-af11-a8f0e98f6882",
+      "id": "330f32fa-8ef9-42f2-acdc-9fd4b94379b3",
       "name": "IF_CacheValid_EPSS",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         900,
-        7700
+        10400
       ],
       "parameters": {
         "conditions": {
@@ -1113,13 +1333,13 @@
       }
     },
     {
-      "id": "5f882ea0-32f0-42ab-8c8a-6bfc1b606543",
+      "id": "9d4f8680-7042-4847-9d92-1a22aa7b1317",
       "name": "HTTP_EPSS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        7750
+        10450
       ],
       "parameters": {
         "url": "https://api.example.com/epss",
@@ -1128,13 +1348,13 @@
       "continueOnFail": true
     },
     {
-      "id": "72fd19e6-9fea-4e9c-826f-b111b9f67e17",
+      "id": "7bb9628b-e1b9-478b-850f-835489a1f27c",
       "name": "IF_ApiSuccess_EPSS",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1500,
-        7750
+        10450
       ],
       "parameters": {
         "conditions": {
@@ -1148,13 +1368,13 @@
       }
     },
     {
-      "id": "40aa57c9-6c20-447f-b90d-3b21c355b9cb",
+      "id": "38b6eeb4-80a1-4997-a555-75db4e35d9d6",
       "name": "DB_SaveCache_EPSS",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1800,
-        7700
+        10400
       ],
       "parameters": {
         "operation": "insert",
@@ -1171,13 +1391,13 @@
       }
     },
     {
-      "id": "b7f07ae6-c21a-43ca-88d3-627241411d57",
+      "id": "dfa84bda-674a-42db-b84d-ff65a048f27e",
       "name": "IF_HasStaleCache_EPSS",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1800,
-        7800
+        10500
       ],
       "parameters": {
         "conditions": {
@@ -1191,52 +1411,52 @@
       }
     },
     {
-      "id": "2ef28d8f-6160-46db-9181-7a0029f2ee8b",
+      "id": "725bc2b5-5b0d-4f6b-a081-1b24510cc1e1",
       "name": "RETURN_CACHE_EPSS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        7600
+        10300
       ],
       "parameters": {
         "jsCode": "return { provider: 'EPSS', source: 'cache', data: $json };"
       }
     },
     {
-      "id": "539f5d7b-c4c9-4562-914b-5e5fd4d04c0a",
+      "id": "1c8ce8b4-eaca-4bb0-a2fc-379ba139ae47",
       "name": "RETURN_STALE_EPSS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        7750
+        10450
       ],
       "parameters": {
         "jsCode": "return { provider: 'EPSS', source: 'stale_cache', data: $items('DB_CacheLookup_EPSS')[0].json };"
       }
     },
     {
-      "id": "f34afdd7-7970-477d-af44-862e1d20fc28",
+      "id": "b30f73cd-8905-4f93-afed-dbc916750b48",
       "name": "SKIP_EPSS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        7850
+        10550
       ],
       "parameters": {
         "jsCode": "return { provider: 'EPSS', skipped: true };"
       }
     },
     {
-      "id": "598d3587-1031-4d18-a4f5-e9010a64317c",
+      "id": "4f982894-a90b-4f9d-aa58-92e9286f4fe2",
       "name": "IF_KEV",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         300,
-        8100
+        10800
       ],
       "parameters": {
         "conditions": {
@@ -1250,13 +1470,13 @@
       }
     },
     {
-      "id": "5b00ca93-d66d-485b-bb50-cc91c6285442",
+      "id": "b0c8ef11-4526-4cbc-9fdb-b195287e2328",
       "name": "DB_CacheLookup_KEV",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         600,
-        8050
+        10750
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -1271,13 +1491,13 @@
       }
     },
     {
-      "id": "4c56d15b-066a-4dc8-9e45-4a51b1b28073",
+      "id": "32f91964-82c9-42cb-bc23-2825c95cfb0e",
       "name": "IF_CacheValid_KEV",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         900,
-        8050
+        10750
       ],
       "parameters": {
         "conditions": {
@@ -1291,13 +1511,13 @@
       }
     },
     {
-      "id": "be03e147-11d4-4c06-aa8b-f5ac6d4785d5",
+      "id": "99136076-1965-4b8e-9d5a-598adf9cbee5",
       "name": "HTTP_KEV",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        8100
+        10800
       ],
       "parameters": {
         "url": "https://api.example.com/kev",
@@ -1306,13 +1526,13 @@
       "continueOnFail": true
     },
     {
-      "id": "2eedad88-3e60-4fd8-83ae-580a1f5c2ad5",
+      "id": "06f45e8e-ebe4-4158-92e5-105497ab033b",
       "name": "IF_ApiSuccess_KEV",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1500,
-        8100
+        10800
       ],
       "parameters": {
         "conditions": {
@@ -1326,13 +1546,13 @@
       }
     },
     {
-      "id": "dcdbb2c9-9cc7-444a-b061-886c329d472a",
+      "id": "181f9a82-6653-4aa9-8c8a-ab5ac435e4d0",
       "name": "DB_SaveCache_KEV",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1800,
-        8050
+        10750
       ],
       "parameters": {
         "operation": "insert",
@@ -1349,13 +1569,13 @@
       }
     },
     {
-      "id": "374cc177-a1c2-4fd9-8170-28dc65d48da6",
+      "id": "af660183-4f2c-4edb-b512-d4f42437633b",
       "name": "IF_HasStaleCache_KEV",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1800,
-        8150
+        10850
       ],
       "parameters": {
         "conditions": {
@@ -1369,52 +1589,52 @@
       }
     },
     {
-      "id": "6a55a1aa-f71c-4646-8ba7-0a87fab8e3e2",
+      "id": "c08b427b-922e-4e6a-8fd6-a272b339de05",
       "name": "RETURN_CACHE_KEV",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        7950
+        10650
       ],
       "parameters": {
         "jsCode": "return { provider: 'KEV', source: 'cache', data: $json };"
       }
     },
     {
-      "id": "a39dac53-b56c-497b-b893-91898d9ffa86",
+      "id": "83c25591-090d-435a-a50f-dada4acfbe18",
       "name": "RETURN_STALE_KEV",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        8100
+        10800
       ],
       "parameters": {
         "jsCode": "return { provider: 'KEV', source: 'stale_cache', data: $items('DB_CacheLookup_KEV')[0].json };"
       }
     },
     {
-      "id": "776281f6-e79a-46c8-951c-abd01bc7cce7",
+      "id": "dfa47e66-ab07-41b4-bf91-7e69ee928234",
       "name": "SKIP_KEV",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        8200
+        10900
       ],
       "parameters": {
         "jsCode": "return { provider: 'KEV', skipped: true };"
       }
     },
     {
-      "id": "75fca51f-3450-4ca6-94d9-87aa1d38c2c3",
+      "id": "1a85cfbb-bc83-49b2-b080-62ad9a14fe9b",
       "name": "IF_Shodan",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         300,
-        8450
+        11150
       ],
       "parameters": {
         "conditions": {
@@ -1428,13 +1648,13 @@
       }
     },
     {
-      "id": "e144be14-7017-40d5-a569-38e50044e451",
+      "id": "f8272ed6-b1c6-4597-a68e-724b4b9337b5",
       "name": "DB_CacheLookup_Shodan",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         600,
-        8400
+        11100
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -1449,13 +1669,13 @@
       }
     },
     {
-      "id": "c59bfd53-78a0-4ea2-9374-f4aa14b5bc12",
+      "id": "71366afd-7de3-4be8-8329-0347e01baf5c",
       "name": "IF_CacheValid_Shodan",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         900,
-        8400
+        11100
       ],
       "parameters": {
         "conditions": {
@@ -1469,13 +1689,13 @@
       }
     },
     {
-      "id": "652d0c18-a381-4106-bc94-4ff402a40b9b",
+      "id": "61326aae-2eec-4af0-b075-675c7654cc19",
       "name": "HTTP_Shodan",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        8450
+        11150
       ],
       "parameters": {
         "url": "https://api.example.com/shodan",
@@ -1484,13 +1704,13 @@
       "continueOnFail": true
     },
     {
-      "id": "9055c6cb-85de-465d-b491-4d701a00ea2e",
+      "id": "ae35afd1-0a0e-4b60-aaf0-c80df372c679",
       "name": "IF_ApiSuccess_Shodan",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1500,
-        8450
+        11150
       ],
       "parameters": {
         "conditions": {
@@ -1504,13 +1724,13 @@
       }
     },
     {
-      "id": "445133cd-5cef-4438-b540-7c88b39c43cb",
+      "id": "67deeea7-ff53-4069-ba3f-2873caa192bd",
       "name": "DB_SaveCache_Shodan",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1800,
-        8400
+        11100
       ],
       "parameters": {
         "operation": "insert",
@@ -1527,13 +1747,13 @@
       }
     },
     {
-      "id": "abb9f4d9-dcb5-464e-b0e5-44f639e489f8",
+      "id": "a01e77d4-dae1-4025-990f-20b6f0119d1a",
       "name": "IF_HasStaleCache_Shodan",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1800,
-        8500
+        11200
       ],
       "parameters": {
         "conditions": {
@@ -1547,52 +1767,52 @@
       }
     },
     {
-      "id": "7b4392fe-555c-4483-b410-cbcbc7bcc851",
+      "id": "bcb00983-415e-4d52-a91c-e042cb967e59",
       "name": "RETURN_CACHE_Shodan",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        8300
+        11000
       ],
       "parameters": {
         "jsCode": "return { provider: 'Shodan', source: 'cache', data: $json };"
       }
     },
     {
-      "id": "e1ded7d2-e784-4894-b8a4-84ac5efee435",
+      "id": "1725a5ff-2712-4720-b40e-a62e1c77781a",
       "name": "RETURN_STALE_Shodan",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        8450
+        11150
       ],
       "parameters": {
         "jsCode": "return { provider: 'Shodan', source: 'stale_cache', data: $items('DB_CacheLookup_Shodan')[0].json };"
       }
     },
     {
-      "id": "55240285-6dbf-4077-98e5-16bb0a6f9680",
+      "id": "d225dd18-2cd6-485e-aabd-0ddc7e40e9e4",
       "name": "SKIP_Shodan",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        8550
+        11250
       ],
       "parameters": {
         "jsCode": "return { provider: 'Shodan', skipped: true };"
       }
     },
     {
-      "id": "3a0f1fb6-ff53-42ee-90ef-6cf232509d31",
+      "id": "704702f0-ade4-4ce1-b73f-78b949668ea6",
       "name": "IF_VirusTotal",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         300,
-        8800
+        11500
       ],
       "parameters": {
         "conditions": {
@@ -1606,13 +1826,13 @@
       }
     },
     {
-      "id": "b15bde5e-5ce2-40b0-b89f-3108406d9d8d",
+      "id": "3426648b-69a9-446d-8646-2e3028751c14",
       "name": "DB_CacheLookup_VirusTotal",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         600,
-        8750
+        11450
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -1627,13 +1847,13 @@
       }
     },
     {
-      "id": "8a6e06e0-c4b5-4b60-876c-25fcb275ba56",
+      "id": "9a28aa60-b562-4a22-b807-6b86e4c68fb7",
       "name": "IF_CacheValid_VirusTotal",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         900,
-        8750
+        11450
       ],
       "parameters": {
         "conditions": {
@@ -1647,13 +1867,13 @@
       }
     },
     {
-      "id": "afe1f404-7a1c-45ef-a5d8-7a98dc3141d2",
+      "id": "a42b7a1d-26a7-4e14-9ee2-8af7ed3523d4",
       "name": "HTTP_VirusTotal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        8800
+        11500
       ],
       "parameters": {
         "url": "https://api.example.com/virustotal",
@@ -1662,13 +1882,13 @@
       "continueOnFail": true
     },
     {
-      "id": "a47b9c2b-3ea2-48fd-9edc-fcc6735f51e7",
+      "id": "703f9e73-4c43-4053-8b63-92b19d802da2",
       "name": "IF_ApiSuccess_VirusTotal",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1500,
-        8800
+        11500
       ],
       "parameters": {
         "conditions": {
@@ -1682,13 +1902,13 @@
       }
     },
     {
-      "id": "22ec8e52-486b-4e37-b3b6-90e69aee2b7f",
+      "id": "446cbf6c-b9c5-45da-9e4a-be8f46d634bb",
       "name": "DB_SaveCache_VirusTotal",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1800,
-        8750
+        11450
       ],
       "parameters": {
         "operation": "insert",
@@ -1705,13 +1925,13 @@
       }
     },
     {
-      "id": "e80edc49-4f04-4b92-8f2f-55c37dbe7265",
+      "id": "274609d0-ebe3-4273-bec0-06b71fd75444",
       "name": "IF_HasStaleCache_VirusTotal",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1800,
-        8850
+        11550
       ],
       "parameters": {
         "conditions": {
@@ -1725,52 +1945,52 @@
       }
     },
     {
-      "id": "a5518eb4-c518-49ab-a095-4b85dea04920",
+      "id": "4f657683-d5ce-4c33-a3ea-bd4d34c58228",
       "name": "RETURN_CACHE_VirusTotal",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        8650
+        11350
       ],
       "parameters": {
         "jsCode": "return { provider: 'VirusTotal', source: 'cache', data: $json };"
       }
     },
     {
-      "id": "88193682-4357-435f-b7a2-0789c04799d2",
+      "id": "d5460d90-f2e6-4191-9571-1443e53f64c2",
       "name": "RETURN_STALE_VirusTotal",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        8800
+        11500
       ],
       "parameters": {
         "jsCode": "return { provider: 'VirusTotal', source: 'stale_cache', data: $items('DB_CacheLookup_VirusTotal')[0].json };"
       }
     },
     {
-      "id": "78118e97-a776-44e3-b791-15e66d3d5b88",
+      "id": "773b511d-ba40-4b42-b7e0-87c95c3fa2bc",
       "name": "SKIP_VirusTotal",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        8900
+        11600
       ],
       "parameters": {
         "jsCode": "return { provider: 'VirusTotal', skipped: true };"
       }
     },
     {
-      "id": "95f2c5ca-2d34-4104-9ce1-711b3496b130",
+      "id": "11729ee4-89a7-4249-9d72-ac50e7efb5dc",
       "name": "IF_GreyNoise",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         300,
-        9150
+        11850
       ],
       "parameters": {
         "conditions": {
@@ -1784,13 +2004,13 @@
       }
     },
     {
-      "id": "05d6e4cb-29e5-4bb6-8c80-e1d7a55df215",
+      "id": "df3b5d54-cec0-4df1-95fa-46f43b533863",
       "name": "DB_CacheLookup_GreyNoise",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         600,
-        9100
+        11800
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -1805,13 +2025,13 @@
       }
     },
     {
-      "id": "90bcb916-96e2-4be8-b5e8-58681fbf4359",
+      "id": "f55ed93e-a21a-46d9-a9fa-aa3cc5e687bb",
       "name": "IF_CacheValid_GreyNoise",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         900,
-        9100
+        11800
       ],
       "parameters": {
         "conditions": {
@@ -1825,13 +2045,13 @@
       }
     },
     {
-      "id": "1f13e60a-4228-4f6b-b9cb-365b944b38fe",
+      "id": "7a3b5039-578c-4dc4-b1ad-6e2f63c14398",
       "name": "HTTP_GreyNoise",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        9150
+        11850
       ],
       "parameters": {
         "url": "https://api.example.com/greynoise",
@@ -1840,13 +2060,13 @@
       "continueOnFail": true
     },
     {
-      "id": "bce943ba-f8da-4187-b676-ba364de7e032",
+      "id": "ce01be3b-d545-4b89-ac5f-129e902b033d",
       "name": "IF_ApiSuccess_GreyNoise",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1500,
-        9150
+        11850
       ],
       "parameters": {
         "conditions": {
@@ -1860,13 +2080,13 @@
       }
     },
     {
-      "id": "4ab35942-1eac-4255-a0a3-ba3cd0ad7442",
+      "id": "e89be242-b3f8-4cc2-b874-c879cc3876b6",
       "name": "DB_SaveCache_GreyNoise",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1800,
-        9100
+        11800
       ],
       "parameters": {
         "operation": "insert",
@@ -1883,13 +2103,13 @@
       }
     },
     {
-      "id": "8ea92d10-3910-468f-a1ea-77b50cace5c3",
+      "id": "5c033cc3-9007-4ad9-9254-a9146988097f",
       "name": "IF_HasStaleCache_GreyNoise",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1800,
-        9200
+        11900
       ],
       "parameters": {
         "conditions": {
@@ -1903,52 +2123,52 @@
       }
     },
     {
-      "id": "0b0825ca-505c-4d13-8334-5d33b933e39b",
+      "id": "8cca4065-10ca-469c-838e-cc3759b96608",
       "name": "RETURN_CACHE_GreyNoise",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        9000
+        11700
       ],
       "parameters": {
         "jsCode": "return { provider: 'GreyNoise', source: 'cache', data: $json };"
       }
     },
     {
-      "id": "a61c9581-f602-458f-a761-b04f67e3b5cc",
+      "id": "d9815c78-f7b9-49fe-ace8-c95c15f82726",
       "name": "RETURN_STALE_GreyNoise",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        9150
+        11850
       ],
       "parameters": {
         "jsCode": "return { provider: 'GreyNoise', source: 'stale_cache', data: $items('DB_CacheLookup_GreyNoise')[0].json };"
       }
     },
     {
-      "id": "04af2484-f56e-4ec3-aa9c-ec311e3de549",
+      "id": "9ea9e67c-1c3d-4a97-b9fb-499e73841991",
       "name": "SKIP_GreyNoise",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        9250
+        11950
       ],
       "parameters": {
         "jsCode": "return { provider: 'GreyNoise', skipped: true };"
       }
     },
     {
-      "id": "96734b61-60b2-455a-be88-f3659e2cf89f",
+      "id": "1ecaf8f0-b550-4674-aaf2-f87eef7ea2cb",
       "name": "IF_AbuseIPDB",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         300,
-        9500
+        12200
       ],
       "parameters": {
         "conditions": {
@@ -1962,13 +2182,13 @@
       }
     },
     {
-      "id": "e93e9487-9cdb-4a1f-ac3a-b78a2e41f1f4",
+      "id": "a254d312-c5fc-4b53-b85f-3c294070a97d",
       "name": "DB_CacheLookup_AbuseIPDB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         600,
-        9450
+        12150
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -1983,13 +2203,13 @@
       }
     },
     {
-      "id": "7f92836d-49cc-4d38-96be-9ac52e78eac9",
+      "id": "d45e4e94-249d-4ba4-bda7-f898a18c6238",
       "name": "IF_CacheValid_AbuseIPDB",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         900,
-        9450
+        12150
       ],
       "parameters": {
         "conditions": {
@@ -2003,13 +2223,13 @@
       }
     },
     {
-      "id": "4bde07e5-671c-42a7-9f9f-4e2c97257e6b",
+      "id": "6604f735-335e-4921-8cee-db2a4d1692b4",
       "name": "HTTP_AbuseIPDB",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        9500
+        12200
       ],
       "parameters": {
         "url": "https://api.example.com/abuseipdb",
@@ -2018,13 +2238,13 @@
       "continueOnFail": true
     },
     {
-      "id": "5fa89f14-89cc-4256-898e-de1516efee5b",
+      "id": "842880d0-59cf-4906-81ec-4a2c31c83b76",
       "name": "IF_ApiSuccess_AbuseIPDB",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1500,
-        9500
+        12200
       ],
       "parameters": {
         "conditions": {
@@ -2038,13 +2258,13 @@
       }
     },
     {
-      "id": "c8d31d52-4f83-4502-a9b5-0592858afb72",
+      "id": "33377532-57a4-4cad-9f71-eb5dd225788c",
       "name": "DB_SaveCache_AbuseIPDB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1800,
-        9450
+        12150
       ],
       "parameters": {
         "operation": "insert",
@@ -2061,13 +2281,13 @@
       }
     },
     {
-      "id": "c880a517-96fb-45df-a26e-bfdd715ab1f8",
+      "id": "b8ecaafa-32ca-4956-abc4-cb17876a9e17",
       "name": "IF_HasStaleCache_AbuseIPDB",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         1800,
-        9550
+        12250
       ],
       "parameters": {
         "conditions": {
@@ -2081,94 +2301,94 @@
       }
     },
     {
-      "id": "a4d24962-ed65-42d8-99f1-635056e08bed",
+      "id": "1fe9c2f6-485c-4255-817b-3dacc0382767",
       "name": "RETURN_CACHE_AbuseIPDB",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        9350
+        12050
       ],
       "parameters": {
         "jsCode": "return { provider: 'AbuseIPDB', source: 'cache', data: $json };"
       }
     },
     {
-      "id": "f2063359-12cf-4235-b36c-ce06728a4cd2",
+      "id": "6786dca6-5746-46e2-a9d3-b5faabc9db4c",
       "name": "RETURN_STALE_AbuseIPDB",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        9500
+        12200
       ],
       "parameters": {
         "jsCode": "return { provider: 'AbuseIPDB', source: 'stale_cache', data: $items('DB_CacheLookup_AbuseIPDB')[0].json };"
       }
     },
     {
-      "id": "a6143ad9-b6eb-43b9-9679-ee3bfecf39e0",
+      "id": "5f991a85-d20d-4e06-8d84-19dc05a9fc71",
       "name": "SKIP_AbuseIPDB",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2100,
-        9600
+        12300
       ],
       "parameters": {
         "jsCode": "return { provider: 'AbuseIPDB', skipped: true };"
       }
     },
     {
-      "id": "bc6df054-80bc-4977-85b9-97163c2ec91c",
+      "id": "ef0894ca-d884-4fd1-918e-8de13422d110",
       "name": "MERGE_ThreatIntel",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         2500,
-        8450
+        11150
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "a3b534db-00b7-45a6-a334-5b188cbec2aa",
+      "id": "6c10802c-dcc0-480c-9669-6ef6b9bafdf0",
       "name": "CODE_ThreatIntelAggregator",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         2800,
-        8450
+        11150
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $items(\"CODE_CalculateDelta\")[0].json;\nglobalJson.threat_intelligence = {\n    sources: {}, summary: {}, confidence: 0,\n    cache: { hits: 0, misses: 0, refreshes: 0, stale: 0 },\n    metrics: { success_count: 0, skip_count: 0, fail_count: 0 }\n};\n\nlet activeSources = 0;\nfor (const item of $input.all()) {\n    const data = item.json;\n    if (data.skipped) {\n        globalJson.threat_intelligence.metrics.skip_count++;\n    } else {\n        globalJson.threat_intelligence.metrics.success_count++;\n        activeSources++;\n        \n        // Track Cache Metrics\n        if (data.source === 'cache') {\n            globalJson.threat_intelligence.cache.hits++;\n        } else if (data.source === 'stale_cache') {\n            globalJson.threat_intelligence.cache.stale++;\n        } else {\n            globalJson.threat_intelligence.cache.refreshes++;\n        }\n\n        globalJson.threat_intelligence.sources[data.provider || 'unknown'] = {\n            source_type: data.source || 'live_api',\n            retrieved_at: new Date().toISOString(),\n            confidence: 0.95\n        };\n    }\n}\n\nglobalJson.threat_intelligence.confidence = activeSources > 0 ? (activeSources / 7) : 0;\nreturn globalJson;\n"
       }
     },
     {
-      "id": "2ec3750b-f9c9-42d3-95a4-2719dd67a013",
-      "name": "Sticky Note: 14 Trend Intelligence Engine",
+      "id": "9db564d2-9b7a-4ea3-b922-2c4464d8bc86",
+      "name": "Sticky Note: 17 Trend Intelligence Engine",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        8900
+        11600
       ],
       "parameters": {
-        "content": "## 14 Trend Intelligence Engine",
+        "content": "## 17 Trend Intelligence Engine",
         "height": 800,
         "width": 1600,
         "color": 3
       }
     },
     {
-      "id": "cc987b0c-f3ec-4bb9-a836-13d52214485b",
+      "id": "3ca09121-a542-44a1-b8f7-f2430eebbeab",
       "name": "DB_LoadHistoricalTrends",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         0,
-        9200
+        11900
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -2183,211 +2403,211 @@
       }
     },
     {
-      "id": "eeb72a8f-3291-4bd3-aca0-6b41ca381ae5",
+      "id": "4f091062-b634-4c27-b7ae-1f85460dbc17",
       "name": "CODE_EngineRiskTrend",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        8900
+        11600
       ],
       "parameters": {
         "jsCode": "// Mock logic for RiskTrend\\nreturn { engine: 'RiskTrend', data: { trend: 'stable', value: Math.random() } };"
       }
     },
     {
-      "id": "c5fa143c-84cc-47ac-8009-1bb449f3a17f",
+      "id": "ba5a32d9-862c-4959-9489-98882b836ab3",
       "name": "CODE_EngineFindingVelocity",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        9050
+        11750
       ],
       "parameters": {
         "jsCode": "// Mock logic for FindingVelocity\\nreturn { engine: 'FindingVelocity', data: { trend: 'stable', value: Math.random() } };"
       }
     },
     {
-      "id": "9ce2a080-c6a9-45c3-b394-9735ee98b790",
+      "id": "8289f1d6-d0b7-4165-8e15-52925ae816fc",
       "name": "CODE_EngineAssetGrowth",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        9200
+        11900
       ],
       "parameters": {
         "jsCode": "// Mock logic for AssetGrowth\\nreturn { engine: 'AssetGrowth', data: { trend: 'stable', value: Math.random() } };"
       }
     },
     {
-      "id": "df3b83f5-eddf-46c9-af91-70d3a2f8a71d",
+      "id": "90f78109-6173-46f8-9b18-0624eda9f1d0",
       "name": "CODE_EngineScannerHealth",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        9350
+        12050
       ],
       "parameters": {
         "jsCode": "// Mock logic for ScannerHealth\\nreturn { engine: 'ScannerHealth', data: { trend: 'stable', value: Math.random() } };"
       }
     },
     {
-      "id": "f5869390-6274-48cf-872b-ed5eea48f796",
+      "id": "831c68a5-c9af-4415-925d-6916e566e759",
       "name": "CODE_EngineThreatEvolution",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        9500
+        12200
       ],
       "parameters": {
         "jsCode": "// Mock logic for ThreatEvolution\\nreturn { engine: 'ThreatEvolution', data: { trend: 'stable', value: Math.random() } };"
       }
     },
     {
-      "id": "a5379ff1-c532-4e56-87a0-37900590daa5",
+      "id": "fdbf67b0-e72f-40e8-8aa5-f69e827decbc",
       "name": "MERGE_TrendEngines",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         700,
-        9200
+        11900
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "e52ca528-9510-4cd8-99ff-ba38b732d1de",
+      "id": "d7762b44-de19-4fe6-b2af-0b2b2778c166",
       "name": "CODE_TrendConfidence",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1000,
-        9200
+        11900
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $items(\"CODE_ThreatIntelAggregator\")[0].json;\n\nglobalJson.trend = {\n    risk: {},\n    findings: {},\n    assets: {},\n    scanner_health: {},\n    threat_evolution: {},\n    confidence: 0.95\n};\n\nfor (const item of $input.all()) {\n    if (item.json.engine === 'RiskTrend') globalJson.trend.risk = item.json.data;\n    if (item.json.engine === 'FindingVelocity') globalJson.trend.findings = item.json.data;\n    if (item.json.engine === 'AssetGrowth') globalJson.trend.assets = item.json.data;\n    if (item.json.engine === 'ScannerHealth') globalJson.trend.scanner_health = item.json.data;\n    if (item.json.engine === 'ThreatEvolution') globalJson.trend.threat_evolution = item.json.data;\n}\n\nreturn globalJson;\n"
       }
     },
     {
-      "id": "ffb151d8-b068-44f1-8d8e-bb72c241eb08",
-      "name": "Sticky Note: 15 Security Intelligence Layer",
+      "id": "6be26c45-9770-471c-9a05-69284182b083",
+      "name": "Sticky Note: 18 Security Intelligence Layer",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        9800
+        12500
       ],
       "parameters": {
-        "content": "## 15 Security Intelligence Layer",
+        "content": "## 18 Security Intelligence Layer",
         "height": 800,
         "width": 1600,
         "color": 5
       }
     },
     {
-      "id": "94bdfb8d-3c30-44f3-8ea5-1fbd38ea7c3b",
+      "id": "9fad4511-b46c-443f-a34e-1bf3c47cc8df",
       "name": "CODE_ExtractRawMetrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         0,
-        10000
+        12700
       ],
       "parameters": {
         "jsCode": "return $json;"
       }
     },
     {
-      "id": "38d338cc-a295-48d0-b193-34a8040f44e5",
+      "id": "caf26836-fa5c-4b66-9704-d0b96f2eb522",
       "name": "CODE_OperationalMetrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        9800
+        12500
       ],
       "parameters": {
         "jsCode": "// Mock logic for Operational Metrics\\nreturn { category: 'operational', metrics: { score: Math.random() } };"
       }
     },
     {
-      "id": "6a9af7a5-ccf7-4b97-801c-3ffface61d6b",
+      "id": "e675bff2-7dec-418b-8152-4fa057581a04",
       "name": "CODE_SecurityMetrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        9950
+        12650
       ],
       "parameters": {
         "jsCode": "// Mock logic for Security Metrics\\nreturn { category: 'security', metrics: { score: Math.random() } };"
       }
     },
     {
-      "id": "f65df1ea-8efa-43a5-8a0c-010f6898f256",
+      "id": "0553ed1f-886b-42d0-88bf-fed5e64df1dc",
       "name": "CODE_ExecutiveMetrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        10100
+        12800
       ],
       "parameters": {
         "jsCode": "// Mock logic for Executive Metrics\\nreturn { category: 'executive', metrics: { score: Math.random() } };"
       }
     },
     {
-      "id": "b1f88510-e9b4-45a2-b960-d74f1336de1e",
+      "id": "0572807f-733d-4346-820b-00ce82f9aea8",
       "name": "CODE_BusinessMetrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         400,
-        10250
+        12950
       ],
       "parameters": {
         "jsCode": "// Mock logic for Business Metrics\\nreturn { category: 'business', metrics: { score: Math.random() } };"
       }
     },
     {
-      "id": "776221ae-3478-4086-983e-5380e094395c",
+      "id": "d59f3bde-b41e-4f08-aee1-c0a5dd76a3dd",
       "name": "MERGE_SecurityIntel",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         700,
-        10000
+        12700
       ],
       "parameters": {
         "mode": "wait"
       }
     },
     {
-      "id": "b11ebf8d-1f72-4a11-9c42-79bf1c40b8c9",
+      "id": "ae912738-2776-4bc3-800a-126578b3dcc4",
       "name": "CODE_SecurityIntelligenceAggregator",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1000,
-        10000
+        12700
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $items(\"CODE_TrendConfidence\")[0].json;\n\nglobalJson.security_intelligence = {\n    operational: {},\n    security: {},\n    executive: {},\n    business: {},\n    generated_at: new Date().toISOString()\n};\n\nfor (const item of $input.all()) {\n    if (item.json.category === 'operational') globalJson.security_intelligence.operational = item.json.metrics;\n    if (item.json.category === 'security') globalJson.security_intelligence.security = item.json.metrics;\n    if (item.json.category === 'executive') globalJson.security_intelligence.executive = item.json.metrics;\n    if (item.json.category === 'business') globalJson.security_intelligence.business = item.json.metrics;\n}\n\nreturn globalJson;\n"
       }
     },
     {
-      "id": "aee5af79-1736-4d1f-8bd4-bb7a7fbfe4d7",
+      "id": "dd477b74-e224-4f2a-b175-97c1acb43e54",
       "name": "DB_SaveSecurityIntelligence",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1300,
-        10000
+        12700
       ],
       "parameters": {
         "operation": "insert",
@@ -2428,97 +2648,97 @@
       }
     },
     {
-      "id": "1ca0043e-251d-4cf0-8f15-3eba5514c955",
-      "name": "Sticky Note: 16 Risk Engine",
+      "id": "d48e417f-2a59-477e-a3d4-169df504e50d",
+      "name": "Sticky Note: 19 Risk Engine",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        10700
+        13400
       ],
       "parameters": {
-        "content": "## 16 Risk Engine",
+        "content": "## 19 Risk Engine",
         "height": 400,
         "width": 1000,
         "color": 7
       }
     },
     {
-      "id": "6af84519-7944-46b6-81bf-433b2844562b",
+      "id": "c0b3a64c-d76f-4f37-9823-8ad8dc544736",
       "name": "CODE_CalculateRisk",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         50,
-        10800
+        13500
       ],
       "parameters": {
         "jsCode": "let score = 0;\n// Deterministic Logic: CVSS + EPSS + KEV + Ports + SSL + Headers + Exposure\nconst vulns = $json.vulnerabilities || [];\nif (vulns.length > 0) score += 40; // Example CVSS weight\nconst ports = $json.ports || [];\nif (ports.includes('3389') || ports.includes('22')) score += 15; // Risky open ports\nif ($json.ssl && $json.ssl.expired) score += 10;\nif (!$json.headers?.HSTS) score += 5;\n\n// Apply historical penalty if new critical port\nif ($json.historical?.new_ports?.includes('3389')) score += 20;\n\n// Clamp score 0-100\n$json.risk.score = Math.min(Math.max(score, 0), 100);\n\n// Calculate delta now that we have current score\nif ($json.historical.previous_risk !== null) {\n  $json.historical.risk_delta = $json.risk.score - $json.historical.previous_risk;\n} else {\n  $json.historical.risk_delta = 0;\n}\nreturn $json;\n"
       }
     },
     {
-      "id": "b05b219d-bb18-4978-b769-614edec31970",
-      "name": "Sticky Note: 17 Ticketing & Incident Management",
+      "id": "c39da2e8-699b-46c4-afd0-e13d8040cb66",
+      "name": "Sticky Note: 20 Ticketing & Incident Management",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        11200
+        13900
       ],
       "parameters": {
-        "content": "## 17 Ticketing & Incident Management",
+        "content": "## 20 Ticketing & Incident Management",
         "height": 800,
         "width": 1600,
         "color": 8
       }
     },
     {
-      "id": "cd186444-e091-47ca-8f95-5730754414fb",
+      "id": "6cecef2b-0702-4dd1-83a1-1bcec3bac130",
       "name": "CODE_IncidentCorrelator",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         0,
-        11400
+        14100
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nconst findings = globalJson.vulnerabilities || [];\nglobalJson.incident = {\n    title: `Incident: Multiple Findings on ${globalJson.TARGET_DOMAIN}`,\n    finding_count: findings.length,\n    related_findings: findings.map(f => f.hash || f.name)\n};\nreturn globalJson;\n"
       }
     },
     {
-      "id": "01ecef33-e727-48a0-8ab2-a86536aa730d",
+      "id": "4ce401ab-2897-45df-b76d-9b8f830dead9",
       "name": "CODE_PriorityMatrix",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         300,
-        11400
+        14100
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nconst riskScore = globalJson.risk_score || 0;\nconst criticality = (globalJson.asset_context || {}).criticality || 'Medium';\n\nlet priority = 'P4';\nif (riskScore > 90 && criticality === 'Critical') priority = 'P1';\nelse if (riskScore > 80) priority = 'P2';\nelse if (riskScore > 60) priority = 'P3';\n\nglobalJson.incident.priority = priority;\nreturn globalJson;\n"
       }
     },
     {
-      "id": "a1722273-6a68-40e7-8f98-53937f775650",
+      "id": "12033aa7-13d7-4676-b6f3-0256ef16c130",
       "name": "CODE_TicketDeduplication",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         600,
-        11400
+        14100
       ],
       "parameters": {
         "jsCode": "// Mock deduplication logic\\n$json.incident.is_duplicate = false;\\nreturn $json;"
       }
     },
     {
-      "id": "f520cc22-391d-4527-ab3c-e97f188172b0",
+      "id": "28dc3aa6-3a87-4d4a-8c35-6e586a8c2276",
       "name": "IF_IsDuplicate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         900,
-        11400
+        14100
       ],
       "parameters": {
         "conditions": {
@@ -2532,26 +2752,26 @@
       }
     },
     {
-      "id": "68d55cac-9b4b-4a6a-905e-e924e0113e82",
+      "id": "8503d41a-1177-4535-b1e8-b50782d7db27",
       "name": "TicketRouter",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        11500
+        14200
       ],
       "parameters": {
         "jsCode": "return $json;"
       }
     },
     {
-      "id": "096f9ff0-ef9f-416f-b599-a9cf64682cd5",
+      "id": "666f7180-27d6-4012-95f1-60a6e71e583e",
       "name": "HTTP_GitHubCreateIssue",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1500,
-        11500
+        14200
       ],
       "parameters": {
         "url": "https://api.github.com/repos/mock/mock/issues",
@@ -2559,13 +2779,13 @@
       }
     },
     {
-      "id": "7a97cd95-8e78-41e6-adb8-cdd35c9134ea",
+      "id": "a78306f1-98ad-4581-b491-a8d2a434ac4c",
       "name": "HTTP_GitHubUpdateIssue",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1500,
-        11300
+        14000
       ],
       "parameters": {
         "url": "https://api.github.com/repos/mock/mock/issues/1",
@@ -2573,13 +2793,13 @@
       }
     },
     {
-      "id": "b3111217-499e-4a2f-928f-9f6ace49c044",
+      "id": "ed8c46ff-6206-4947-96ab-08c08ee91548",
       "name": "DB_SaveIncidentState",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         1800,
-        11400
+        14100
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -2594,42 +2814,42 @@
       }
     },
     {
-      "id": "3364dd94-c546-4f6c-ab77-1a4e022005b5",
-      "name": "Sticky Note: 18 Notification & Approval Engine",
+      "id": "fe11de26-db81-4e60-be7c-196cbd3ab5f6",
+      "name": "Sticky Note: 21 Notification & Approval Engine",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        12100
+        14800
       ],
       "parameters": {
-        "content": "## 18 Notification & Approval Engine",
+        "content": "## 21 Notification & Approval Engine",
         "height": 800,
         "width": 1200,
         "color": 8
       }
     },
     {
-      "id": "be616e3c-862f-41f6-a744-d5390682afa2",
+      "id": "cee46ed5-764a-43f6-9fa3-dbf198711ef2",
       "name": "CODE_NotificationPolicyEngine",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         0,
-        12300
+        15000
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nconst priority = (globalJson.incident || {}).priority || 'P4';\nconst policy = { require_approval: false, channels: [] };\n\nif (priority === 'P1') {\n    policy.require_approval = true;\n    policy.channels = ['Slack', 'Email'];\n} else if (priority === 'P2') {\n    policy.channels = ['Slack', 'Email'];\n} else if (priority === 'P3') {\n    policy.channels = ['Slack'];\n}\n\nglobalJson.notification_policy = policy;\nreturn globalJson;\n"
       }
     },
     {
-      "id": "985b40aa-8b18-4119-8b06-c0aa06c5d661",
+      "id": "3c343b67-cd11-43f1-b7a1-aa5abfaec10a",
       "name": "IF_RequiresApproval",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
         300,
-        12300
+        15000
       ],
       "parameters": {
         "conditions": {
@@ -2643,13 +2863,13 @@
       }
     },
     {
-      "id": "21f70404-8385-4044-a7c1-785b32d209e3",
+      "id": "5d164e06-910c-47c6-973f-cdb09c1d44b7",
       "name": "WAIT_ForApproval",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
       "position": [
         600,
-        12200
+        14900
       ],
       "parameters": {
         "resume": "webhook",
@@ -2657,39 +2877,39 @@
       }
     },
     {
-      "id": "b5ae2ba7-ea80-48ce-9875-cf00776e2e25",
+      "id": "73853986-8598-4a05-8b83-17ac14038433",
       "name": "CODE_EscalationLogic",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         900,
-        12200
+        14900
       ],
       "parameters": {
         "jsCode": "\n// If wait timeout hit, escalate\n$json.incident.escalated = true;\nreturn $json;\n"
       }
     },
     {
-      "id": "dd355e40-1ba1-45f2-9464-9abc1f8721f0",
+      "id": "34c9628f-7758-47b0-83f2-f4f7c0633337",
       "name": "CODE_NotificationRouter",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         900,
-        12400
+        15100
       ],
       "parameters": {
         "jsCode": "\n// Routes to different channels based on policy.channels\nreturn $json;\n"
       }
     },
     {
-      "id": "16e9cb14-6188-4335-a70f-73eab3cb3c25",
+      "id": "669b2046-0333-4d6e-8157-cfdcfd58f5e1",
       "name": "HTTP_SlackWebhook",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        12400
+        15100
       ],
       "parameters": {
         "url": "https://hooks.slack.com/services/mock",
@@ -2697,29 +2917,29 @@
       }
     },
     {
-      "id": "bd8241b0-47d6-41fa-b121-98c7f43bc482",
-      "name": "Sticky Note: 19 Multi-Agent AI System",
+      "id": "67f20854-8a0e-4e9c-9333-907b8dd04143",
+      "name": "Sticky Note: 22 Multi-Agent AI System",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        13000
+        15700
       ],
       "parameters": {
-        "content": "## 19 Multi-Agent AI System",
+        "content": "## 22 Multi-Agent AI System",
         "height": 800,
         "width": 1400,
         "color": 6
       }
     },
     {
-      "id": "27b7d285-07c1-4d85-aca5-cf5a0017dd51",
+      "id": "8c61cb69-3a8f-4ca7-9ddd-528a7b87c1ca",
       "name": "AI_IncidentCommander",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         -300,
-        13200
+        15900
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
@@ -2740,13 +2960,13 @@
       }
     },
     {
-      "id": "9a9d3402-2fae-4307-8724-c87a14b9e61e",
+      "id": "82827e71-d0d5-4b2b-bd5c-17e16baf67ff",
       "name": "AI_SecurityAnalyst",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         0,
-        13200
+        15900
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
@@ -2767,13 +2987,13 @@
       }
     },
     {
-      "id": "e873e6f4-5034-43e7-b778-866456e8f035",
+      "id": "cf0ca46f-c219-4464-b739-fd101a1d635e",
       "name": "AI_ThreatAnalyst",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         300,
-        13200
+        15900
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
@@ -2794,13 +3014,13 @@
       }
     },
     {
-      "id": "9834fe27-bdd8-4139-86ca-673d46b872be",
+      "id": "0b0946ac-5c68-470d-93e9-cc4ef39d462b",
       "name": "AI_ExecutiveAnalyst",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         600,
-        13200
+        15900
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
@@ -2821,13 +3041,13 @@
       }
     },
     {
-      "id": "a65d53ae-62e6-4589-ad1d-1047a4059b37",
+      "id": "07fb93f6-7c05-4d38-b10a-be3bb112dee1",
       "name": "AI_RemediationPlanner",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         900,
-        13200
+        15900
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
@@ -2848,13 +3068,13 @@
       }
     },
     {
-      "id": "50f89874-e3da-4656-b6e3-d73fa28ea17c",
+      "id": "87ba78b9-c03d-4cb9-b7cf-f3767d366002",
       "name": "AI_ComplianceAdvisor",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1200,
-        13200
+        15900
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
@@ -2875,13 +3095,13 @@
       }
     },
     {
-      "id": "f37b3cc3-11d1-4368-a868-01245ffa7963",
+      "id": "7247ea20-49d1-4d0e-ba87-e72272004e11",
       "name": "AI_QualityValidator",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1500,
-        13200
+        15900
       ],
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
@@ -2902,123 +3122,412 @@
       }
     },
     {
-      "id": "ed5fa5ee-ac97-4c03-9625-c4ec88df7d28",
-      "name": "Sticky Note: 20 Executive Governance & Scorecards",
+      "id": "4f0a0ce7-f923-4850-8566-ce3158b83d04",
+      "name": "Sticky Note: 23 AI Investigation Engine",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        13900
+        16600
       ],
       "parameters": {
-        "content": "## 20 Executive Governance & Scorecards",
+        "content": "## 23 AI Investigation Engine",
+        "height": 800,
+        "width": 1600,
+        "color": 6
+      }
+    },
+    {
+      "id": "26572cb4-b0f1-49ad-939f-07d239d3cfd1",
+      "name": "CODE_InvestigationGateway",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        16800
+      ],
+      "parameters": {
+        "jsCode": "\n// Accepts GET /investigation requests routed from API Gateway\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "a1d332df-96c3-4499-8684-85fbe096ecdb",
+      "name": "CODE_ContextBuilder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        16800
+      ],
+      "parameters": {
+        "jsCode": "\n// Fetch EVERYTHING from DB for the incident\nconst globalJson = $json;\nglobalJson.investigation_context = {\n    incident: { id: \"INC-123\", status: \"open\" },\n    findings: [],\n    risk_score: 95,\n    threat_intelligence: {},\n    cloud_findings: [],\n    iac_findings: [],\n    audit_trail: []\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "78cfea96-6094-49f4-9200-36b9d21bc5da",
+      "name": "AI_IntentDetector",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        600,
+        16800
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4-turbo"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"role\": \"system\", \"content\": \"Analyze the user question and determine intent: [Incident, Threat, Compliance, Executive].\"}, {\"role\": \"user\", \"content\": \"{{ $json.question }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b30718a2-0336-4268-a098-29002558c0b0",
+      "name": "AI_IncidentInvestigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        16600
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "acaad594-40c3-4f87-acf1-ec05cc6335d4",
+      "name": "AI_ThreatAnalysis_Investigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        16750
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "baae2e4a-3625-439a-b6a3-f692809abbe1",
+      "name": "AI_Compliance_Investigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        16900
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "47bc6a44-41a5-480d-87ba-b765c682cae3",
+      "name": "AI_Executive_Investigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        17050
+      ],
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "245cbfa6-fdca-4dc1-a050-0852b8d808f6",
+      "name": "CODE_ResponseGenerator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        16800
+      ],
+      "parameters": {
+        "jsCode": "\n// Final Answer\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "d20c8f55-9ed6-4afb-a459-d22173eb0b0f",
+      "name": "Sticky Note: 24 Executive Governance & Scorecards",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        17500
+      ],
+      "parameters": {
+        "content": "## 24 Executive Governance & Scorecards",
         "height": 800,
         "width": 1000,
         "color": 6
       }
     },
     {
-      "id": "eb05522d-6f2b-4154-994f-1ca2af5dd38f",
+      "id": "94ba51b7-7f52-46ec-a909-4e210e5b73bf",
       "name": "CODE_ComplianceEngine",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         0,
-        14100
+        17700
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nconst findings = globalJson.vulnerabilities || [];\nconst compliance = { mappings: [] };\n\nfindings.forEach(f => {\n    compliance.mappings.push({\n        finding: f.name || f.hash,\n        frameworks: [\n            { name: \"OWASP\", control: \"A05\" },\n            { name: \"CIS\", control: \"9.2\" },\n            { name: \"NIST CSF\", control: \"PR.DS\" }\n        ]\n    });\n});\n\nglobalJson.compliance = compliance;\nreturn globalJson;\n"
       }
     },
     {
-      "id": "aef62863-6c9f-4918-9e5d-87c9b59b84d0",
+      "id": "09b9b656-e9bb-445e-a21d-54e59ac58aba",
       "name": "CODE_ExecutiveScorecard",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         300,
-        14100
+        17700
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nglobalJson.scorecards = {\n    operational: {\n        scan_success_rate: \"99%\",\n        avg_scan_duration: \"45s\",\n        cache_hit_rate: \"85%\"\n    },\n    security: {\n        critical_findings: (globalJson.vulnerabilities || []).length,\n        cloud_misconfigs: (globalJson.cloud_findings || []).length\n    },\n    executive: {\n        overall_security_score: globalJson.risk_score || 90,\n        mttd: \"4h\",\n        mttr: \"24h\"\n    },\n    business: {\n        production_risk: \"High\",\n        compliance_coverage: \"95%\"\n    }\n};\nreturn globalJson;\n"
       }
     },
     {
-      "id": "69d7a51e-6f61-4a15-9a7f-9495519dcd46",
+      "id": "a479f7e4-790b-4776-bfa1-2dbafa33a1da",
       "name": "CODE_ComplianceDashboard",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         600,
-        14100
+        17700
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nglobalJson.compliance.percentages = {\n    OWASP: \"91%\",\n    CIS: \"87%\",\n    NIST: \"93%\",\n    SOC2: \"89%\",\n    ISO27001: \"85%\"\n};\nreturn globalJson;\n"
       }
     },
     {
-      "id": "026858b5-6230-4415-9956-5fa79356ef92",
+      "id": "40940057-6614-4817-9379-a0de2018f901",
       "name": "CODE_ExecutiveRiskIndex",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         900,
-        14100
+        17700
       ],
       "parameters": {
         "jsCode": "\nconst globalJson = $json;\nconst riskScore = globalJson.risk_score || 90;\nlet grade = \"A\";\nif (riskScore < 90) grade = \"B\";\nif (riskScore < 70) grade = \"C\";\nif (riskScore < 50) grade = \"F\";\n\nglobalJson.scorecards.executive_risk_index = {\n    security_score: riskScore,\n    business_risk: 31,\n    compliance_score: 88,\n    operational_health: 95,\n    overall_grade: grade\n};\nreturn globalJson;\n"
       }
     },
     {
-      "id": "768a1be1-244b-4b7c-a36c-9f13557889bb",
+      "id": "45c9a096-32dc-4427-b6a6-eb00931fc17f",
       "name": "CODE_ReportGenerator",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         1200,
-        14100
+        17700
       ],
       "parameters": {
-        "jsCode": "\nconst globalJson = $json;\n\n// Construct the final normalized payload structure\nconst finalPayload = {\n    workflow_metadata: { timestamp: new Date().toISOString() },\n    asset: {},\n    cmdb: globalJson.asset_context || {},\n    evidence: {},\n    dns: globalJson.dns || {},\n    ssl: globalJson.ssl || {},\n    headers: globalJson.headers || {},\n    ports: globalJson.ports || [],\n    vulnerabilities: globalJson.vulnerabilities || [],\n    cloud: globalJson.cloud_findings || {},\n    containers: globalJson.container_findings || {},\n    threat_intelligence: globalJson.threat_intelligence || {},\n    historical: globalJson.historical || {},\n    changes: globalJson.changes || {},\n    incident: globalJson.incident || {},\n    tickets: globalJson.tickets || {},\n    notifications: globalJson.notification_policy || {},\n    approvals: {},\n    risk: { score: globalJson.risk_score, factors: globalJson.risk_factors },\n    trend: globalJson.trends || {},\n    compliance: globalJson.compliance || {},\n    scorecards: globalJson.scorecards || {},\n    reports: {\n        executive: \"Generated PDF summary...\",\n        technical: \"Generated Technical JSON...\",\n    },\n    ai: globalJson.ai_analysis || {},\n    execution: {}\n};\n\nreturn finalPayload;\n"
+        "jsCode": "\nconst globalJson = $json;\n\n// Construct the final normalized payload structure\nconst finalPayload = {\n    workflow_metadata: { timestamp: new Date().toISOString() },\n    asset: {},\n    cmdb: globalJson.asset_context || {},\n    evidence: {},\n    dns: globalJson.dns || {},\n    ssl: globalJson.ssl || {},\n    headers: globalJson.headers || {},\n    ports: globalJson.ports || [],\n    vulnerabilities: globalJson.vulnerabilities || [],\n    cloud: globalJson.cloud_findings || {},\n    containers: globalJson.container_findings || {},\n    threat_intelligence: globalJson.threat_intelligence || {},\n    historical: globalJson.historical || {},\n    changes: globalJson.changes || {},\n    incident: globalJson.incident || {},\n    tickets: globalJson.tickets || {},\n    notifications: globalJson.notification_policy || {},\n    approvals: {},\n    risk: { score: globalJson.risk_score, factors: globalJson.risk_factors },\n    trend: globalJson.trends || {},\n    compliance: globalJson.compliance || {},\n    scorecards: globalJson.scorecards || {},\n    reports: {\n        executive: \"Generated PDF summary...\",\n        technical: \"Generated Technical JSON...\",\n    },\n    ai: globalJson.ai_analysis || {},\n    execution: {},\n    platform: {},\n    plugins: globalJson.plugins_enabled || [],\n    rbac: {},\n    api: {},\n    iac: globalJson.iac || {},\n    integrations: {},\n    siem: globalJson.siem || {},\n    events: globalJson.events || {},\n    metrics: {}\n};\n\nreturn finalPayload;\n"
       }
     },
     {
-      "id": "5fae4d05-ed1d-4ced-9a4b-5b6c78522545",
-      "name": "Sticky Note: 21 PostgreSQL & Notifications",
+      "id": "7596fe94-8f55-41c4-8bd0-20c9843a4af1",
+      "name": "Sticky Note: 25 Observability Layer",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        14800
+        18400
       ],
       "parameters": {
-        "content": "## 21 PostgreSQL & Notifications",
+        "content": "## 25 Observability Layer",
+        "height": 800,
+        "width": 1000,
+        "color": 8
+      }
+    },
+    {
+      "id": "22565a5d-8026-4638-9817-3b03d9dabb28",
+      "name": "CODE_PlatformHealthMonitor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        18600
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.observability = {\n    platform_health: {\n        workflow_success_rate: \"99.9%\",\n        queue_depth: 0,\n        api_latency_ms: 45,\n        db_latency_ms: 12\n    },\n    incidents: [] // Self-monitoring incidents\n};\nif (globalJson.observability.platform_health.api_latency_ms > 1000) {\n    globalJson.observability.incidents.push(\"API Latency High\");\n}\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "ac410382-2bcf-4969-b82a-70aba8112df2",
+      "name": "CODE_AIMetricsTracker",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        18600
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.observability.ai_metrics = {\n    prompt_tokens: 14500,\n    completion_tokens: 2100,\n    cost_usd: 0.15,\n    latency_ms: 3200,\n    model: \"gpt-4-turbo\"\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "a2356049-2105-46c7-b05d-0d80ce4841c7",
+      "name": "CODE_DashboardRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        18600
+      ],
+      "parameters": {
+        "jsCode": "\n// Routes observability metrics to Executive, SOC, Operations, Platform, AI Dashboards\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "54a3cdea-0315-48cc-8aea-63870db89c0f",
+      "name": "Sticky Note: 26 Event Bus & Integration Hub",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        19300
+      ],
+      "parameters": {
+        "content": "## 26 Event Bus & Integration Hub",
+        "height": 800,
+        "width": 1200,
+        "color": 7
+      }
+    },
+    {
+      "id": "834f9b54-1084-4197-8865-c5b60cf6dfad",
+      "name": "CODE_EventMetadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        0,
+        19500
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.events = {\n    event_id: \"evt_\" + Math.random().toString(36).substr(2, 9),\n    event_type: \"INCIDENT_CREATED\",\n    source: \"Risk Engine\",\n    timestamp: new Date().toISOString(),\n    correlation_id: \"corr_\" + Math.random().toString(36).substr(2, 9),\n    tenant_id: \"tnt_001\"\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "1ba19df2-2450-4dd1-8780-0d78ff013795",
+      "name": "CODE_IntegrationHub",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        300,
+        19500
+      ],
+      "parameters": {
+        "jsCode": "\n// Routes to ITSM, Messaging, SIEM\nreturn $json;\n"
+      }
+    },
+    {
+      "id": "5fdfb993-66ca-4ca7-b024-7bbac36d421f",
+      "name": "CODE_SIEMRouter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        19500
+      ],
+      "parameters": {
+        "jsCode": "\nconst globalJson = $json;\nglobalJson.siem = {\n    routed_to: ['Splunk', 'Sentinel']\n};\nreturn globalJson;\n"
+      }
+    },
+    {
+      "id": "e75b267e-4148-4b8b-becc-c034bafbd9de",
+      "name": "SIEM_Splunk",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        19400
+      ],
+      "parameters": {
+        "url": "https://splunk.mock",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "0094eb51-2637-4222-b86a-0379b931edb9",
+      "name": "SIEM_Sentinel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        900,
+        19600
+      ],
+      "parameters": {
+        "url": "https://sentinel.mock",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "2ae6fcb8-ef93-403c-a75a-54fc877a61ce",
+      "name": "MERGE_EventBus",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        19500
+      ],
+      "parameters": {
+        "mode": "wait"
+      }
+    },
+    {
+      "id": "06a0d3a0-20f6-447d-9f82-bf031542794e",
+      "name": "Sticky Note: 27 PostgreSQL & Notifications",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        20200
+      ],
+      "parameters": {
+        "content": "## 27 PostgreSQL & Notifications",
         "height": 400,
         "width": 1000,
         "color": 5
       }
     },
     {
-      "id": "e0a943ff-64ff-4523-9545-8af1b1988391",
+      "id": "623880b1-7b39-48a9-885d-83594618868c",
       "name": "CODE_ExecutionSummary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
         50,
-        14900
+        20300
       ],
       "parameters": {
         "jsCode": "$json.execution_summary = {\n  assets_scanned: 1,\n  duration: 94,\n  findings: $json.vulnerabilities?.length || 0,\n  critical: $json.risk.score >= 90 ? 1 : 0,\n  high: $json.risk.score >= 70 && $json.risk.score < 90 ? 1 : 0,\n  medium: $json.risk.score >= 40 && $json.risk.score < 70 ? 1 : 0,\n  low: $json.risk.score >= 10 && $json.risk.score < 40 ? 1 : 0,\n  failed_scanners: []\n};\nreturn $json;\n"
       }
     },
     {
-      "id": "47504566-107d-461c-81bc-9b10b6aa3d2e",
+      "id": "0be9d1ee-98f7-4980-a571-ba3b1868b7d6",
       "name": "DB_InsertFindings",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         250,
-        14900
+        20300
       ],
       "parameters": {
         "operation": "insert",
@@ -3035,13 +3544,13 @@
       }
     },
     {
-      "id": "0661abc3-e54e-49f8-a6f0-d5434a0014dc",
+      "id": "413a9af9-bd41-49da-ada3-7beb3a8707f4",
       "name": "SWITCH_Severity",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
         450,
-        14900
+        20300
       ],
       "parameters": {
         "mode": "rules",
@@ -3100,13 +3609,13 @@
       }
     },
     {
-      "id": "cdd47b09-8c65-4c75-b503-ddc5a0cd6755",
+      "id": "ac2e4d2b-a51f-4ed2-9abb-7f2895979255",
       "name": "HTTP_Slack_Critical",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         650,
-        14900
+        20300
       ],
       "parameters": {
         "url": "https://hooks.slack.com/services/YOUR/WEBHOOK",
@@ -3124,13 +3633,13 @@
       "continueOnFail": true
     },
     {
-      "id": "e58d8bb3-47b6-466a-bb6e-f691fe022198",
-      "name": "MERGE_21",
+      "id": "87f96d4a-6aff-474c-928e-52083139a290",
+      "name": "MERGE_27",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
       "position": [
         850,
-        14950
+        20350
       ],
       "parameters": {
         "mode": "wait"
@@ -3138,6 +3647,87 @@
     }
   ],
   "connections": {
+    "API_Scan": {
+      "main": [
+        [
+          {
+            "node": "CODE_RBAC_Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API_Investigation": {
+      "main": [
+        [
+          {
+            "node": "CODE_RBAC_Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API_Dashboard": {
+      "main": [
+        [
+          {
+            "node": "CODE_RBAC_Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API_Health": {
+      "main": [
+        [
+          {
+            "node": "CODE_RBAC_Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_RBAC_Validator": {
+      "main": [
+        [
+          {
+            "node": "CODE_API_Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_API_Router": {
+      "main": [
+        [
+          {
+            "node": "Trigger_Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Trigger_GitHub",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Trigger_Schedule",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Trigger_Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Trigger_Webhook": {
       "main": [
         [
@@ -3202,7 +3792,7 @@
       "main": [
         [
           {
-            "node": "MERGE_2",
+            "node": "MERGE_3",
             "type": "main",
             "index": 0
           }
@@ -3213,14 +3803,14 @@
       "main": [
         [
           {
-            "node": "MERGE_2",
+            "node": "MERGE_3",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "MERGE_2": {
+    "MERGE_3": {
       "main": [
         [
           {
@@ -3246,6 +3836,28 @@
       "main": [
         [
           {
+            "node": "DB_LoadPlugins",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB_LoadPlugins": {
+      "main": [
+        [
+          {
+            "node": "CODE_PluginRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_PluginRouter": {
+      "main": [
+        [
+          {
             "node": "HTTP_Subfinder",
             "type": "main",
             "index": 0
@@ -3262,7 +3874,7 @@
       "main": [
         [
           {
-            "node": "MERGE_4",
+            "node": "MERGE_6",
             "type": "main",
             "index": 0
           }
@@ -3273,14 +3885,14 @@
       "main": [
         [
           {
-            "node": "MERGE_4",
+            "node": "MERGE_6",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "MERGE_4": {
+    "MERGE_6": {
       "main": [
         [
           {
@@ -3300,7 +3912,7 @@
       "main": [
         [
           {
-            "node": "MERGE_5",
+            "node": "MERGE_7",
             "type": "main",
             "index": 0
           }
@@ -3311,14 +3923,14 @@
       "main": [
         [
           {
-            "node": "MERGE_5",
+            "node": "MERGE_7",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "MERGE_5": {
+    "MERGE_7": {
       "main": [
         [
           {
@@ -3343,7 +3955,7 @@
       "main": [
         [
           {
-            "node": "MERGE_6",
+            "node": "MERGE_8",
             "type": "main",
             "index": 0
           }
@@ -3354,7 +3966,7 @@
       "main": [
         [
           {
-            "node": "MERGE_6",
+            "node": "MERGE_8",
             "type": "main",
             "index": 1
           }
@@ -3365,14 +3977,14 @@
       "main": [
         [
           {
-            "node": "MERGE_6",
+            "node": "MERGE_8",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "MERGE_6": {
+    "MERGE_8": {
       "main": [
         [
           {
@@ -3397,7 +4009,7 @@
       "main": [
         [
           {
-            "node": "MERGE_7",
+            "node": "MERGE_9",
             "type": "main",
             "index": 0
           }
@@ -3408,7 +4020,7 @@
       "main": [
         [
           {
-            "node": "MERGE_7",
+            "node": "MERGE_9",
             "type": "main",
             "index": 1
           }
@@ -3419,14 +4031,14 @@
       "main": [
         [
           {
-            "node": "MERGE_7",
+            "node": "MERGE_9",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "MERGE_7": {
+    "MERGE_9": {
       "main": [
         [
           {
@@ -3538,6 +4150,60 @@
       "main": [
         [
           {
+            "node": "IaC_Terraform",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IaC_Kubernetes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IaC_Helm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IaC_Terraform": {
+      "main": [
+        [
+          {
+            "node": "CODE_IaCNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IaC_Kubernetes": {
+      "main": [
+        [
+          {
+            "node": "CODE_IaCNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IaC_Helm": {
+      "main": [
+        [
+          {
+            "node": "CODE_IaCNormalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_IaCNormalizer": {
+      "main": [
+        [
+          {
             "node": "CODE_StandardizeJSON",
             "type": "main",
             "index": 0
@@ -3565,7 +4231,7 @@
       "main": [
         [
           {
-            "node": "MERGE_11",
+            "node": "MERGE_14",
             "type": "main",
             "index": 0
           }
@@ -3576,14 +4242,14 @@
       "main": [
         [
           {
-            "node": "MERGE_11",
+            "node": "MERGE_14",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "MERGE_11": {
+    "MERGE_14": {
       "main": [
         [
           {
@@ -5119,6 +5785,109 @@
       "main": [
         [
           {
+            "node": "CODE_InvestigationGateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_InvestigationGateway": {
+      "main": [
+        [
+          {
+            "node": "CODE_ContextBuilder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ContextBuilder": {
+      "main": [
+        [
+          {
+            "node": "AI_IntentDetector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_IntentDetector": {
+      "main": [
+        [
+          {
+            "node": "AI_IncidentInvestigation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI_ThreatAnalysis_Investigation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI_Compliance_Investigation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI_Executive_Investigation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_IncidentInvestigation": {
+      "main": [
+        [
+          {
+            "node": "CODE_ResponseGenerator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_ThreatAnalysis_Investigation": {
+      "main": [
+        [
+          {
+            "node": "CODE_ResponseGenerator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_Compliance_Investigation": {
+      "main": [
+        [
+          {
+            "node": "CODE_ResponseGenerator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_Executive_Investigation": {
+      "main": [
+        [
+          {
+            "node": "CODE_ResponseGenerator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_ResponseGenerator": {
+      "main": [
+        [
+          {
             "node": "CODE_ComplianceEngine",
             "type": "main",
             "index": 0
@@ -5174,6 +5943,110 @@
       "main": [
         [
           {
+            "node": "CODE_PlatformHealthMonitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_PlatformHealthMonitor": {
+      "main": [
+        [
+          {
+            "node": "CODE_AIMetricsTracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_AIMetricsTracker": {
+      "main": [
+        [
+          {
+            "node": "CODE_DashboardRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_DashboardRouter": {
+      "main": [
+        [
+          {
+            "node": "CODE_EventMetadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_EventMetadata": {
+      "main": [
+        [
+          {
+            "node": "CODE_IntegrationHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_IntegrationHub": {
+      "main": [
+        [
+          {
+            "node": "CODE_SIEMRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CODE_SIEMRouter": {
+      "main": [
+        [
+          {
+            "node": "SIEM_Splunk",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SIEM_Sentinel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SIEM_Splunk": {
+      "main": [
+        [
+          {
+            "node": "MERGE_EventBus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SIEM_Sentinel": {
+      "main": [
+        [
+          {
+            "node": "MERGE_EventBus",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MERGE_EventBus": {
+      "main": [
+        [
+          {
             "node": "CODE_ExecutionSummary",
             "type": "main",
             "index": 0
@@ -5200,7 +6073,7 @@
       "main": [
         [
           {
-            "node": "MERGE_21",
+            "node": "MERGE_27",
             "type": "main",
             "index": 0
           }
@@ -5211,7 +6084,7 @@
       "main": [
         [
           {
-            "node": "MERGE_21",
+            "node": "MERGE_27",
             "type": "main",
             "index": 1
           }
@@ -5222,7 +6095,7 @@
       "main": [
         [
           {
-            "node": "MERGE_21",
+            "node": "MERGE_27",
             "type": "main",
             "index": 0
           }
@@ -5233,7 +6106,7 @@
       "main": [
         [
           {
-            "node": "MERGE_21",
+            "node": "MERGE_27",
             "type": "main",
             "index": 1
           }

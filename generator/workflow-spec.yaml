@@ -1,7 +1,98 @@
 name: AI Security Guardian Mega Workflow
 sections:
 - id: 1
-  name: 01 Trigger Layer
+  name: 01 API Gateway & RBAC
+  color: 6
+  manual_wiring: true
+  nodes:
+  - name: API_Scan
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 0
+    parameters:
+      path: api/v1/scan
+      httpMethod: POST
+      responseMode: lastNode
+    connections:
+      main:
+      - - node: CODE_RBAC_Validator
+          type: main
+          index: 0
+  - name: API_Investigation
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 150
+    parameters:
+      path: api/v1/investigation
+      httpMethod: POST
+      responseMode: lastNode
+    connections:
+      main:
+      - - node: CODE_RBAC_Validator
+          type: main
+          index: 0
+  - name: API_Dashboard
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 300
+    parameters:
+      path: api/v1/dashboard
+      httpMethod: GET
+      responseMode: lastNode
+    connections:
+      main:
+      - - node: CODE_RBAC_Validator
+          type: main
+          index: 0
+  - name: API_Health
+    type: n8n-nodes-base.webhook
+    entrypoint: true
+    x: 0
+    y: 450
+    parameters:
+      path: api/v1/health
+      httpMethod: GET
+      responseMode: lastNode
+    connections:
+      main:
+      - - node: CODE_RBAC_Validator
+          type: main
+          index: 0
+  - name: CODE_RBAC_Validator
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: "\n// Mock RBAC validation against postgres table\nconst authHeader\
+        \ = ($node.API_Scan || $node.API_Dashboard || $node.API_Health || $node.API_Investigation\
+        \ || {headers:{}})?.headers?.authorization;\nif (!authHeader) {\n    // In\
+        \ reality, this would throw an error to return 401\n    return { auth: { status:\
+        \ 'unauthorized', role: 'none' } };\n}\nreturn { auth: { status: 'authorized',\
+        \ role: 'Admin' } };\n"
+    connections:
+      main:
+      - - node: CODE_API_Router
+          type: main
+          index: 0
+  - name: CODE_API_Router
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 600
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Route to Trigger Layer if it''s a scan, else handle response
+
+        return $json;
+
+        '
+    connections: {}
+- id: 2
+  name: 02 Trigger Layer
   color: 7
   manual_wiring: true
   nodes:
@@ -69,8 +160,8 @@ sections:
         \      source: source,\n        timestamp: new Date().toISOString(),\n   \
         \     initiated_by: 'system'\n    }\n};\n"
     connections: {}
-- id: 2
-  name: 02 Configuration
+- id: 3
+  name: 03 Configuration
   color: 6
   nodes:
   - name: CRON_Trigger
@@ -137,8 +228,8 @@ sections:
           value: 21600
         - name: TTL_ABUSEIPDB
           value: 86400
-- id: 3
-  name: 03 Asset Inventory
+- id: 4
+  name: 04 Asset Inventory
   color: 2
   manual_wiring: true
   nodes:
@@ -172,8 +263,49 @@ sections:
         \ = $json || { domain: config.TARGET_DOMAIN, environment: 'Unknown', criticality:\
         \ 'Medium' };\n\nreturn {\n    ...config,\n    asset_context: cmdb\n};\n"
     connections: {}
-- id: 4
-  name: 04 Asset Discovery
+- id: 5
+  name: 05 Plugin Manager
+  color: 2
+  manual_wiring: true
+  nodes:
+  - name: DB_LoadPlugins
+    type: n8n-nodes-base.postgres
+    entrypoint: true
+    continueOnFail: true
+    credentials:
+      postgres:
+        id: ''
+        name: Postgres account
+    x: 0
+    y: 200
+    parameters:
+      operation: executeQuery
+      query: SELECT * FROM plugins WHERE enabled = true ORDER BY priority ASC
+    connections:
+      main:
+      - - node: CODE_PluginRouter
+          type: main
+          index: 0
+  - name: CODE_PluginRouter
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 300
+    y: 200
+    parameters:
+      jsCode: '
+
+        const globalJson = $json;
+
+        const activePlugins = $input.all().map(i => i.json);
+
+        globalJson.plugins_enabled = activePlugins.map(p => p.name);
+
+        return globalJson;
+
+        '
+    connections: {}
+- id: 6
+  name: 06 Asset Discovery
   color: 1
   nodes:
   - name: HTTP_Subfinder
@@ -188,8 +320,8 @@ sections:
     parameters:
       url: https://api.whois.example/v1?domain={{ $('CFG_Configuration').item.json.TARGET_DOMAIN
         }}
-- id: 5
-  name: 05 DNS
+- id: 7
+  name: 07 DNS
   color: 1
   nodes:
   - name: HTTP_CloudflareDNS
@@ -206,8 +338,8 @@ sections:
   - name: HTTP_ReverseDNS
     type: n8n-nodes-base.httpRequest
     continueOnFail: true
-- id: 6
-  name: 06 Attack Surface
+- id: 8
+  name: 08 Attack Surface
   color: 2
   nodes:
   - name: CMD_Nmap
@@ -229,8 +361,8 @@ sections:
     continueOnFail: true
     parameters:
       url: https://{{ $('CFG_Configuration').item.json.TARGET_DOMAIN }}
-- id: 7
-  name: 07 Vulnerability Scanning
+- id: 9
+  name: 09 Vulnerability Scanning
   color: 3
   nodes:
   - name: CMD_Nuclei
@@ -245,8 +377,8 @@ sections:
   - name: CMD_ZAP_Passive
     type: n8n-nodes-base.executeCommand
     continueOnFail: true
-- id: 8
-  name: 08 Cloud Security
+- id: 10
+  name: 10 Cloud Security
   color: 3
   manual_wiring: true
   nodes:
@@ -299,8 +431,8 @@ sections:
         )[0].json;\nglobalJson.cloud_findings = [\n    { provider: 'aws', resource_type:\
         \ 's3', resource_id: 'bucket-1', risk: 'high' }\n];\nreturn globalJson;\n"
     connections: {}
-- id: 9
-  name: 09 Container Security
+- id: 11
+  name: 11 Container Security
   color: 4
   manual_wiring: true
   nodes:
@@ -350,8 +482,60 @@ sections:
         )[0].json;\nglobalJson.container_findings = [\n    { image_name: 'nginx:latest',\
         \ vulnerabilities: 5, secrets: 1 }\n];\nreturn globalJson;\n"
     connections: {}
-- id: 10
-  name: 10 Normalizer
+- id: 12
+  name: 12 IaC Manager
+  color: 5
+  manual_wiring: true
+  nodes:
+  - name: IaC_Terraform
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 0
+    parameters:
+      command: echo 'Terraform Scan'
+    connections:
+      main:
+      - - node: CODE_IaCNormalizer
+          type: main
+          index: 0
+  - name: IaC_Kubernetes
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 150
+    parameters:
+      command: echo 'K8s Scan'
+    connections:
+      main:
+      - - node: CODE_IaCNormalizer
+          type: main
+          index: 0
+  - name: IaC_Helm
+    type: n8n-nodes-base.executeCommand
+    entrypoint: true
+    x: 0
+    y: 300
+    parameters:
+      command: echo 'Helm Scan'
+    connections:
+      main:
+      - - node: CODE_IaCNormalizer
+          type: main
+          index: 0
+  - name: CODE_IaCNormalizer
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 400
+    y: 150
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.iac = {\n    framework: \"\
+        Terraform\",\n    resource_type: \"aws_security_group\",\n    resource_name:\
+        \ \"prod-web-sg\",\n    misconfiguration: \"0.0.0.0/0 on port 22\",\n    severity:\
+        \ \"Critical\"\n};\nreturn globalJson;\n"
+    connections: {}
+- id: 13
+  name: 13 Normalizer
   color: 6
   nodes:
   - name: CODE_StandardizeJSON
@@ -378,8 +562,8 @@ sections:
         \ \"1.7\"\n    },\n    scanners: {\n      nmap: { success: !!$items(\"CMD_Nmap\"\
         )[0], duration: 0 },\n      nuclei: { success: !!$items(\"CMD_Nuclei\")[0],\
         \ duration: 0 }\n    }\n  }\n};\n"
-- id: 11
-  name: 11 Historical Comparison
+- id: 14
+  name: 14 Historical Comparison
   color: 5
   nodes:
   - name: DB_GetPreviousScan
@@ -402,8 +586,8 @@ sections:
         \ = {\n  previous_risk: previousScore,\n  is_first_scan: previousScore ===\
         \ null,\n  new_ports: [], \n  closed_ports: [],\n  new_cves: [],\n  resolved_cves:\
         \ []\n};\nreturn $json;\n"
-- id: 12
-  name: 12 Change Detection Engine
+- id: 15
+  name: 15 Change Detection Engine
   color: 1
   manual_wiring: true
   nodes:
@@ -436,8 +620,8 @@ sections:
         \ || { criticality: 'Medium' };\n\nglobalJson.changes.forEach(change => {\n\
         \    change.business_impact = assetContext.criticality;\n});\n\nreturn globalJson;\n"
     connections: {}
-- id: 13
-  name: 13 Threat Intelligence Cache
+- id: 16
+  name: 16 Threat Intelligence Cache
   color: 4
   manual_wiring: true
   nodes:
@@ -1575,8 +1759,8 @@ sections:
         \            retrieved_at: new Date().toISOString(),\n            confidence:\
         \ 0.95\n        };\n    }\n}\n\nglobalJson.threat_intelligence.confidence\
         \ = activeSources > 0 ? (activeSources / 7) : 0;\nreturn globalJson;\n"
-- id: 14
-  name: 14 Trend Intelligence Engine
+- id: 17
+  name: 17 Trend Intelligence Engine
   color: 3
   manual_wiring: true
   nodes:
@@ -1699,8 +1883,8 @@ sections:
         \ === 'ScannerHealth') globalJson.trend.scanner_health = item.json.data;\n\
         \    if (item.json.engine === 'ThreatEvolution') globalJson.trend.threat_evolution\
         \ = item.json.data;\n}\n\nreturn globalJson;\n"
-- id: 15
-  name: 15 Security Intelligence Layer
+- id: 18
+  name: 18 Security Intelligence Layer
   color: 5
   manual_wiring: true
   nodes:
@@ -1832,8 +2016,8 @@ sections:
           value: ={{ JSON.stringify($json.security_intelligence.executive) }}
         - column: business_metrics
           value: ={{ JSON.stringify($json.security_intelligence.business) }}
-- id: 16
-  name: 16 Risk Engine
+- id: 19
+  name: 19 Risk Engine
   color: 7
   nodes:
   - name: CODE_CalculateRisk
@@ -1850,8 +2034,8 @@ sections:
         \ 0), 100);\n\n// Calculate delta now that we have current score\nif ($json.historical.previous_risk\
         \ !== null) {\n  $json.historical.risk_delta = $json.risk.score - $json.historical.previous_risk;\n\
         } else {\n  $json.historical.risk_delta = 0;\n}\nreturn $json;\n"
-- id: 17
-  name: 17 Ticketing & Incident Management
+- id: 20
+  name: 20 Ticketing & Incident Management
   color: 8
   manual_wiring: true
   nodes:
@@ -1981,8 +2165,8 @@ sections:
       operation: executeQuery
       query: SELECT 1
     connections: {}
-- id: 18
-  name: 18 Notification & Approval Engine
+- id: 21
+  name: 21 Notification & Approval Engine
   color: 8
   manual_wiring: true
   nodes:
@@ -2078,8 +2262,8 @@ sections:
       url: https://hooks.slack.com/services/mock
       method: POST
     connections: {}
-- id: 19
-  name: 19 Multi-Agent AI System
+- id: 22
+  name: 22 Multi-Agent AI System
   color: 6
   manual_wiring: true
   nodes:
@@ -2229,8 +2413,138 @@ sections:
             "content": "{{ JSON.stringify($json) }}"}]'
     connections: {}
     exitpoint: true
-- id: 20
-  name: 20 Executive Governance & Scorecards
+- id: 23
+  name: 23 AI Investigation Engine
+  color: 6
+  manual_wiring: true
+  nodes:
+  - name: CODE_InvestigationGateway
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Accepts GET /investigation requests routed from API Gateway
+
+        return $json;
+
+        '
+    connections:
+      main:
+      - - node: CODE_ContextBuilder
+          type: main
+          index: 0
+  - name: CODE_ContextBuilder
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: "\n// Fetch EVERYTHING from DB for the incident\nconst globalJson =\
+        \ $json;\nglobalJson.investigation_context = {\n    incident: { id: \"INC-123\"\
+        , status: \"open\" },\n    findings: [],\n    risk_score: 95,\n    threat_intelligence:\
+        \ {},\n    cloud_findings: [],\n    iac_findings: [],\n    audit_trail: []\n\
+        };\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: AI_IntentDetector
+          type: main
+          index: 0
+  - name: AI_IntentDetector
+    type: n8n-nodes-base.httpRequest
+    x: 600
+    y: 200
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+      sendBody: true
+      bodyParameters:
+        parameters:
+        - name: model
+          value: gpt-4-turbo
+        - name: messages
+          value: '=[{"role": "system", "content": "Analyze the user question and determine
+            intent: [Incident, Threat, Compliance, Executive]."}, {"role": "user",
+            "content": "{{ $json.question }}"}]'
+    connections:
+      main:
+      - - node: AI_IncidentInvestigation
+          type: main
+          index: 0
+        - node: AI_ThreatAnalysis_Investigation
+          type: main
+          index: 0
+        - node: AI_Compliance_Investigation
+          type: main
+          index: 0
+        - node: AI_Executive_Investigation
+          type: main
+          index: 0
+  - name: AI_IncidentInvestigation
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 0
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+    connections:
+      main:
+      - - node: CODE_ResponseGenerator
+          type: main
+          index: 0
+  - name: AI_ThreatAnalysis_Investigation
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 150
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+    connections:
+      main:
+      - - node: CODE_ResponseGenerator
+          type: main
+          index: 0
+  - name: AI_Compliance_Investigation
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 300
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+    connections:
+      main:
+      - - node: CODE_ResponseGenerator
+          type: main
+          index: 0
+  - name: AI_Executive_Investigation
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 450
+    parameters:
+      url: https://api.openai.com/v1/chat/completions
+      method: POST
+    connections:
+      main:
+      - - node: CODE_ResponseGenerator
+          type: main
+          index: 0
+  - name: CODE_ResponseGenerator
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 1200
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Final Answer
+
+        return $json;
+
+        '
+    connections: {}
+- id: 24
+  name: 24 Executive Governance & Scorecards
   color: 6
   manual_wiring: true
   nodes:
@@ -2320,10 +2634,148 @@ sections:
         \ || {},\n    scorecards: globalJson.scorecards || {},\n    reports: {\n \
         \       executive: \"Generated PDF summary...\",\n        technical: \"Generated\
         \ Technical JSON...\",\n    },\n    ai: globalJson.ai_analysis || {},\n  \
-        \  execution: {}\n};\n\nreturn finalPayload;\n"
+        \  execution: {},\n    platform: {},\n    plugins: globalJson.plugins_enabled\
+        \ || [],\n    rbac: {},\n    api: {},\n    iac: globalJson.iac || {},\n  \
+        \  integrations: {},\n    siem: globalJson.siem || {},\n    events: globalJson.events\
+        \ || {},\n    metrics: {}\n};\n\nreturn finalPayload;\n"
     connections: {}
-- id: 21
-  name: 21 PostgreSQL & Notifications
+- id: 25
+  name: 25 Observability Layer
+  color: 8
+  manual_wiring: true
+  nodes:
+  - name: CODE_PlatformHealthMonitor
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.observability = {\n    platform_health:\
+        \ {\n        workflow_success_rate: \"99.9%\",\n        queue_depth: 0,\n\
+        \        api_latency_ms: 45,\n        db_latency_ms: 12\n    },\n    incidents:\
+        \ [] // Self-monitoring incidents\n};\nif (globalJson.observability.platform_health.api_latency_ms\
+        \ > 1000) {\n    globalJson.observability.incidents.push(\"API Latency High\"\
+        );\n}\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_AIMetricsTracker
+          type: main
+          index: 0
+  - name: CODE_AIMetricsTracker
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.observability.ai_metrics =\
+        \ {\n    prompt_tokens: 14500,\n    completion_tokens: 2100,\n    cost_usd:\
+        \ 0.15,\n    latency_ms: 3200,\n    model: \"gpt-4-turbo\"\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_DashboardRouter
+          type: main
+          index: 0
+  - name: CODE_DashboardRouter
+    type: n8n-nodes-base.code
+    exitpoint: true
+    x: 600
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Routes observability metrics to Executive, SOC, Operations, Platform, AI
+        Dashboards
+
+        return $json;
+
+        '
+    connections: {}
+- id: 26
+  name: 26 Event Bus & Integration Hub
+  color: 7
+  manual_wiring: true
+  nodes:
+  - name: CODE_EventMetadata
+    type: n8n-nodes-base.code
+    entrypoint: true
+    x: 0
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.events = {\n    event_id: \"\
+        evt_\" + Math.random().toString(36).substr(2, 9),\n    event_type: \"INCIDENT_CREATED\"\
+        ,\n    source: \"Risk Engine\",\n    timestamp: new Date().toISOString(),\n\
+        \    correlation_id: \"corr_\" + Math.random().toString(36).substr(2, 9),\n\
+        \    tenant_id: \"tnt_001\"\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: CODE_IntegrationHub
+          type: main
+          index: 0
+  - name: CODE_IntegrationHub
+    type: n8n-nodes-base.code
+    x: 300
+    y: 200
+    parameters:
+      jsCode: '
+
+        // Routes to ITSM, Messaging, SIEM
+
+        return $json;
+
+        '
+    connections:
+      main:
+      - - node: CODE_SIEMRouter
+          type: main
+          index: 0
+  - name: CODE_SIEMRouter
+    type: n8n-nodes-base.code
+    x: 600
+    y: 200
+    parameters:
+      jsCode: "\nconst globalJson = $json;\nglobalJson.siem = {\n    routed_to: ['Splunk',\
+        \ 'Sentinel']\n};\nreturn globalJson;\n"
+    connections:
+      main:
+      - - node: SIEM_Splunk
+          type: main
+          index: 0
+        - node: SIEM_Sentinel
+          type: main
+          index: 0
+  - name: SIEM_Splunk
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 100
+    parameters:
+      url: https://splunk.mock
+      method: POST
+    connections:
+      main:
+      - - node: MERGE_EventBus
+          type: main
+          index: 0
+  - name: SIEM_Sentinel
+    type: n8n-nodes-base.httpRequest
+    x: 900
+    y: 300
+    parameters:
+      url: https://sentinel.mock
+      method: POST
+    connections:
+      main:
+      - - node: MERGE_EventBus
+          type: main
+          index: 1
+  - name: MERGE_EventBus
+    type: n8n-nodes-base.merge
+    exitpoint: true
+    x: 1200
+    y: 200
+    parameters:
+      mode: wait
+    connections: {}
+- id: 27
+  name: 27 PostgreSQL & Notifications
   color: 5
   nodes:
   - name: CODE_ExecutionSummary

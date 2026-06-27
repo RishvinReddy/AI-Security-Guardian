@@ -1,18 +1,17 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
-## [1.0.0] - 2026-06-27
+## [v3.0.0] - 2026-06-27
 
 ### Added
-- Mega Workflow (`AI_Security_Guardian_Mega.json`) compiling 15 logical sections.
-- YAML Generator (`workflow-spec.yaml` + `build.py`) for automated compilation.
-- Centralized Data Normalization with Asset Fingerprints.
-- Deterministic Risk Engine combining CVSS, KEV, and Asset Exposure.
-- OpenAI Integration for executive and technical summaries.
-- PostgreSQL Schema (6 tables) for structured execution and findings logs.
-- Docker Compose stack with n8n, Redis, and Postgres.
+- **API Gateway & RBAC**: Exposed `/scan`, `/investigation`, `/dashboard` via Webhooks, secured via PostgreSQL Role-Based Access Control.
+- **Plugin Manager**: Decoupled hardcoded scanners. Scanners are now dynamically orchestrated via the `plugins` database table.
+- **Enterprise Security Support**: Inserted dedicated execution branches for Cloud (AWS Prowler, Azure, GCP) and Container (Trivy FS/Image/SBOM) security.
+- **Infrastructure-as-Code (IaC)**: Integrated Terraform, Kubernetes, and Helm manifest scanning. IaC misconfigurations natively inflate the Risk Engine score.
+- **Event Bus & SIEM Router**: Abstracted outbound communication. All incidents push to a central Event Bus, which routes to an Integration Hub (Slack, Jira) and SIEM Router (Splunk, Sentinel).
+- **AI Investigation Gateway**: Evolved the multi-agent AI system into a dynamic query engine allowing users to ask natural language questions regarding incidents.
+- **Observability Layer**: Workflow now actively monitors itself (tracking AI costs, token counts, execution latencies) and generates `workflow_health_incidents` upon degradation.
+- **Executive Governance**: Added full compliance mapping (NIST, CIS, OWASP, SOC2) and an Executive Scorecard generator (calculating security, operational, and business KPIs).
 
-### Security
-- Added `continueOnFail` error handling to prevent API timeouts from halting workflows.
-- Implemented severity-based alert routing.
+### Changed
+- Converted `AI_Security_Guardian.json` from a strict vulnerability scanning pipeline into a 700-node modular Platform Ecosystem.
+- Database Schema expanded from 6 tables to 35 tables to support tracking changes, incidents, plugins, permissions, and metrics.

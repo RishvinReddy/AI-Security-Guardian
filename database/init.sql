@@ -267,3 +267,124 @@ CREATE TABLE IF NOT EXISTS container_findings (
     finding_data JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- PHASE 4 TABLES
+
+-- 24. Roles
+CREATE TABLE IF NOT EXISTS roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT
+);
+
+-- 25. Permissions
+CREATE TABLE IF NOT EXISTS permissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    role_id UUID REFERENCES roles(id),
+    resource VARCHAR(100) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    UNIQUE(role_id, resource, action)
+);
+
+-- 26. Users
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(100) UNIQUE NOT NULL,
+    role_id UUID REFERENCES roles(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 27. API Keys
+CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    api_key_hash VARCHAR(255) NOT NULL,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 28. Plugins
+CREATE TABLE IF NOT EXISTS plugins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    version VARCHAR(20),
+    category VARCHAR(50),
+    enabled BOOLEAN DEFAULT true,
+    timeout INTEGER DEFAULT 60,
+    priority INTEGER DEFAULT 1
+);
+
+-- 29. Plugin Settings
+CREATE TABLE IF NOT EXISTS plugin_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plugin_id UUID REFERENCES plugins(id),
+    key VARCHAR(100) NOT NULL,
+    value JSONB,
+    UNIQUE(plugin_id, key)
+);
+
+-- 30. Plugin Credentials
+CREATE TABLE IF NOT EXISTS plugin_credentials (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plugin_id UUID REFERENCES plugins(id),
+    credential_name VARCHAR(100) NOT NULL,
+    encrypted_value TEXT NOT NULL
+);
+
+-- 31. Plugin Logs
+CREATE TABLE IF NOT EXISTS plugin_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plugin_id UUID REFERENCES plugins(id),
+    execution_id UUID REFERENCES executions(id),
+    status VARCHAR(50),
+    message TEXT,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 32. IaC Findings
+CREATE TABLE IF NOT EXISTS iac_findings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    execution_id UUID REFERENCES executions(id),
+    asset_id UUID REFERENCES assets(id),
+    framework VARCHAR(50) NOT NULL,
+    resource_type VARCHAR(100),
+    resource_name VARCHAR(255),
+    misconfiguration TEXT NOT NULL,
+    severity VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 33. Platform Events (Event Bus)
+CREATE TABLE IF NOT EXISTS platform_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type VARCHAR(100) NOT NULL,
+    source VARCHAR(100) NOT NULL,
+    correlation_id UUID,
+    tenant_id VARCHAR(50),
+    payload JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 34. AI Metrics
+CREATE TABLE IF NOT EXISTS ai_metrics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    execution_id UUID REFERENCES executions(id),
+    model_used VARCHAR(50),
+    prompt_tokens INTEGER,
+    completion_tokens INTEGER,
+    total_cost NUMERIC(10,5),
+    latency_ms INTEGER,
+    success BOOLEAN,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 35. Workflow Health Incidents (Platform Monitoring)
+CREATE TABLE IF NOT EXISTS workflow_health_incidents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    component VARCHAR(100) NOT NULL, -- e.g. API, Database, Plugin, AI
+    issue_type VARCHAR(100) NOT NULL,
+    description TEXT,
+    severity VARCHAR(20) DEFAULT 'High',
+    resolved BOOLEAN DEFAULT false,
+    detected_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
