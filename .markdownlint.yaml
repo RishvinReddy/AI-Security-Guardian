@@ -8,3 +8,7 @@ MD032: false # Lists should be surrounded by blank lines
 MD033: false # Inline HTML
 MD041: false # First line in a file should be a top-level heading
 MD042: false # No empty links
+MD004: false # Unordered list style (dash vs asterisk)
+MD007: false # Unordered list indentation
+MD005: false # Inconsistent indentation for list items at the same level
+MD029: false # Ordered list item prefix
