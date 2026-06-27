@@ -21,8 +21,7 @@ jobs:
           
       - name: Validate YAML Files
         run: |
-          npm install -g yaml-lint
-          yamllint $(find . -name "*.yaml" -o -name "*.yml")
+          npx yaml-lint $(find . -name "*.yaml" -o -name "*.yml")
           
       - name: Lint Markdown
         uses: DavidAnson/markdownlint-cli2-action@v14
