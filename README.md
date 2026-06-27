@@ -144,7 +144,7 @@ flowchart LR
     B[Exposed RDP/SSH Ports] -->|+15 points per Port| D
     C[Missing HTTP Headers] -->|+5 points per Header| D
     
-    D --> E{Math.min(Score, 100)}
+    D --> E{"Math.min(Score, 100)"}
     E --> F[Final Risk Score 0-100]
 ```
 
