@@ -1,0 +1,34 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate JSON Files
+        run: |
+          for file in $(find . -name "*.json"); do
+            echo "Validating $file"
+            jq empty "$file" || exit 1
+          done
+          
+      - name: Validate YAML Files
+        run: |
+          npm install -g yaml-lint
+          yamllint $(find . -name "*.yaml" -o -name "*.yml")
+          
+      - name: Lint Markdown
+        uses: DavidAnson/markdownlint-cli2-action@v14
+        with:
+          globs: "**/*.md"
+          
+      - name: Validate Docker Compose
+        run: |
+          docker compose config -q

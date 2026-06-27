@@ -1,0 +1,21 @@
+{
+  "workflow_metadata": {
+    "version": "1.0.0",
+    "execution_id": "demo-uuid-12345"
+  },
+  "asset": {
+    "domain": "demo-target.local",
+    "fingerprint": "demo-target.local_192.168.1.100"
+  },
+  "ports": [
+    {"port": 80, "state": "open", "confidence": 0.98},
+    {"port": 22, "state": "open", "confidence": 0.98}
+  ],
+  "vulnerabilities": [
+    {"id": "CVE-2024-DEMO", "severity": "high", "confidence": 0.95}
+  ],
+  "risk": {
+    "score": 75,
+    "rating": "High"
+  }
+}

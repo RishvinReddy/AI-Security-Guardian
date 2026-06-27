@@ -1,0 +1,7 @@
+{
+  "TARGET_DOMAIN": "demo-target.local",
+  "SCAN_PROFILE": "Demo",
+  "ENABLE_NMAP": false,
+  "ENABLE_NUCLEI": false,
+  "ENABLE_AI": true
+}

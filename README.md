@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://socialify.git.ci/RishvinReddy/AI-Security-Guardian/image?description=1&font=Inter&language=1&name=1&owner=1&pattern=Circuit%20Board&theme=Dark" alt="AI Security Guardian Banner" width="100%">
+  <img src="assets/banner.png" alt="AI Security Guardian Banner" width="100%">
   
   <br/>
   <br/>
@@ -26,9 +26,16 @@
 
 ## 📖 Executive Overview
 
-**AI Security Guardian** is a highly scalable, fully autonomous security automation platform. It bridges the gap between traditional raw vulnerability scanners and modern, context-aware Security Operations Centers. 
+**AI Security Guardian** is a highly scalable, autonomous security automation platform. It transforms standard vulnerability scanning into a continuous, intelligent pipeline. 
 
-Instead of relying on human analysts to parse thousands of lines of Nmap XML or Nuclei JSON, this platform orchestrates the tools, mathematical calculates the exact deterministic risk based on exposure, and leverages **GPT-4o** to act as a Senior Security Analyst—synthesizing the data into prioritized, executive-ready intelligence.
+By unifying open-source security tools (Nmap, Nuclei, Subfinder) with a deterministic Risk Engine and an OpenAI-powered Security Analyst, this project automatically discovers assets, scans for vulnerabilities, normalizes the data into a centralized JSON object, calculates risk, and delivers actionable, severity-routed alerts.
+
+### 📊 Quick Stats
+- **150+** Workflow Nodes
+- **15** Logical Execution Sections
+- **20+** Supported Integrations (OpenAI, Slack, PostgreSQL, Nmap, etc.)
+- **6** Normalized Database Tables
+- **100%** Open Source Architecture
 
 ---
 
@@ -248,6 +255,23 @@ docker-compose up -d
 
 ---
 
+## 📁 Repository Structure
+```text
+ai-security-guardian/
+├── AI_Security_Guardian_Mega.json # The compiled master workflow
+├── generator/                     # YAML-to-JSON compiler logic
+│   ├── workflow-spec.yaml         # Edit architecture here!
+│   └── build.py
+├── database/
+│   └── init.sql                   # 6-Table PostgreSQL schema
+├── scripts/                       # Deployment scripts
+├── docs/                          # Detailed architecture documentation
+├── examples/                      # Demo outputs & configs
+└── workflows/modular/             # Original individual tool logic
+```
+
+---
+
 ## 🗺️ Roadmap
 
 ### Phase 1: Core Scanner & AI Analysis ✅ (v1.0.0)
@@ -265,6 +289,25 @@ docker-compose up -d
 - [ ] Jira / GitHub Issues Ticketing Automation based on findings
 - [ ] Cloud & Container Security Audits (Prowler / Trivy integration)
 - [ ] Automated Compliance Scoring (SOC2 / CIS Benchmarks)
+
+---
+
+## ❓ FAQ
+
+**Do I need Docker to run this?**
+Yes, the easiest way to ensure n8n, Postgres, and the network scanners are configured properly is via the provided `docker-compose.yml`.
+
+**Does this work on Windows?**
+Yes, via Windows Subsystem for Linux (WSL2) with Docker Desktop installed.
+
+**Can I disable Nmap if it's too slow?**
+Absolutely. The `CFG_Configuration` node allows you to toggle `ENABLE_NMAP` or `ENABLE_NUCLEI` independently.
+
+**How do I add new scanners?**
+To add a new tool, modify `generator/workflow-spec.yaml` to include an `Execute Command` node for your tool, map its output in the Normalizer section, and re-run `build.py`.
+
+**Are OpenAI API keys strictly required?**
+No. If you toggle `ENABLE_AI` to false, the platform will skip the GPT-4o analysis and solely rely on the deterministic Risk Score and raw vulnerabilities for Slack/Database reporting.
 
 ---
 
