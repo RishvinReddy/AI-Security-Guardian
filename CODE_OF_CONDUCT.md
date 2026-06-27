@@ -4,4 +4,4 @@ As contributors and maintainers of this project, we pledge to respect all people
 
 We are committed to making participation in this project a harassment-free experience for everyone, regardless of level of experience, gender, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, ethnicity, age, or religion.
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting Rishvin Reddy (the project maintainer) via GitHub.

@@ -74,3 +74,7 @@ AI Security Guardian operates as a single massive 15-section pipeline, automatic
 
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](../../issues). Read the [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+---
+
+**AI Security Guardian** is maintained by [Rishvin Reddy](https://github.com/RishvinReddy).
